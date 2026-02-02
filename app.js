@@ -1,416 +1,330 @@
-const express = require('express');
-const session = require('express-session');
-const MySQLStore = require('express-mysql-session')(session);
-const flash = require('connect-flash');
-const multer = require('multer');
-require('dotenv').config();
+const path = require("path");
+const express = require("express");
+const mysql = require("mysql2/promise");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const cookieParser = require("cookie-parser");
+require("dotenv").config();
+
 const app = express();
 
-const userController = require('./controllers/UserController');
-const cartController = require('./controllers/CartController');
-const productController = require('./controllers/ProductController');
-const orderController = require('./controllers/OrderController');
-const reviewController = require('./controllers/ReviewController');
-const netsController = require('./controllers/netsController');
-const refundController = require('./controllers/RefundController');
-const adminRefundController = require('./controllers/AdminRefundController');
-const subscriptionController = require('./controllers/SubscriptionController');
-const reportController = require('./controllers/ReportController');
-const { checkAuthenticated, checkAdmin, checkRoles } = require('./middleware');
-const { createOrder, captureOrder } = require('./services/paypal');
-const { createCheckoutSession, retrieveCheckoutSession } = require('./services/stripe');
-const Order = require('./models/order');
-const PaymentAttempt = require('./models/paymentAttempt');
-const { withRetries } = require('./services/retry');
-const fraudService = require('./services/fraud');
-const { DEFAULT_CURRENCY, normaliseCurrency, convertAmount, getExchangeRate } = require('./services/currency');
-const subscriptionService = require('./services/subscriptionService');
-const Notifications = require('./services/notifications');
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
-// Set up multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/images');
-    },
-    filename: (req, file, cb) => {
-        cb(null, file.originalname);
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
+
+app.get("/", async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT c.id, c.course_name, c.price, c.category,
+              i.name AS instructor_name
+       FROM courses c
+       LEFT JOIN instructors i ON c.instructor_id = i.id
+       ORDER BY c.course_name ASC`
+    );
+    res.render("index", { courses: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/courses/:id", async (req, res, next) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT c.id, c.course_name, c.description, c.price, c.category,
+              c.instructor_id, u.name AS instructor_name
+       FROM courses c
+       LEFT JOIN users u ON c.instructor_id = u.id
+       WHERE c.id = ?`,
+      [req.params.id]
+    );
+    if (!rows.length) {
+      return res.status(404).render("404");
     }
+    res.render("courseDetails", { course: rows[0], status: req.query });
+  } catch (err) {
+    next(err);
+  }
 });
 
-const upload = multer({ storage: storage });
-
-// Set up view engine
-app.set('view engine', 'ejs');
-// Enable static files
-app.use(express.static('public'));
-// Enable form processing
-app.use(express.urlencoded({
-    extended: false
-}));
-app.use(express.json());
-
-// Session Middleware stored in MySQL so sessions persist across browsers/devices
-const sessionStore = new MySQLStore({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    createDatabaseTable: true
+app.post("/courses/:id/enroll", async (req, res, next) => {
+  try {
+    const studentId = req.body.student_id;
+    if (!studentId) {
+      return res.status(400).send("Student ID is required to enroll.");
+    }
+    await pool.query(
+      "INSERT INTO enrollments (course_id, student_id) VALUES (?, ?)",
+      [req.params.id, studentId]
+    );
+    res.redirect(`/courses/${req.params.id}?enrolled=1`);
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'secret',
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
-}));
+app.get("/login", (req, res) => {
+  res.render("login", { error: null });
+});
 
-app.use(flash());
+app.post("/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).render("login", {
+        error: "Email and password are required.",
+      });
+    }
 
-// Expose session user and flash feedback to all templates
-app.use((req, res, next) => {
-    res.locals.user = req.session.user || null;
-    res.locals.messages = req.flash('success');
-    res.locals.errors = req.flash('error');
-    res.locals.formData = req.flash('formData')[0] || null;
+    const [rows] = await pool.query(
+      "SELECT id, name, email, password_hash, role FROM users WHERE email = ? LIMIT 1",
+      [email]
+    );
+    if (!rows.length) {
+      return res.status(401).render("login", {
+        error: "Invalid email or password.",
+      });
+    }
+
+    const user = rows[0];
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).render("login", {
+        error: "Invalid email or password.",
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET || "dev_secret_change_me",
+      { expiresIn: "2h" }
+    );
+
+    res.cookie("token", token, { httpOnly: true });
+
+    const role = (user.role || "").toLowerCase();
+    if (role === "admin") {
+      return res.redirect("/dashboard/admin");
+    }
+    if (role === "lecturer") {
+      return res.redirect("/dashboard/lecturer");
+    }
+    return res.redirect("/dashboard/student");
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/dashboard/student", authenticateToken, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const [enrollments] = await pool.query(
+      `SELECT e.id, e.progress, c.id AS course_id, c.course_name, c.category, c.price
+       FROM enrollments e
+       INNER JOIN courses c ON e.course_id = c.id
+       WHERE e.student_id = ?
+       ORDER BY c.course_name`,
+      [userId]
+    );
+
+    const [walletRows] = await pool.query(
+      "SELECT balance FROM wallet WHERE user_id = ? LIMIT 1",
+      [userId]
+    );
+    const walletBalance = walletRows.length ? walletRows[0].balance : 0;
+
+    const [transactions] = await pool.query(
+      `SELECT id, type, amount, status, created_at
+       FROM transactions
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    res.render("dashboard", {
+      enrollments,
+      walletBalance,
+      transactions,
+      status: req.query,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get("/dashboard/lecturer", (req, res) => {
+  res.render("dashboard");
+});
+
+const authenticateToken = (req, res, next) => {
+  const token = req.cookies ? req.cookies.token : null;
+  if (!token) {
+    return res.redirect("/login");
+  }
+  try {
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "dev_secret_change_me"
+    );
+    req.user = payload;
     next();
-});
+  } catch (err) {
+    return res.redirect("/login");
+  }
+};
 
-// Routes
-app.get('/', (req, res) => {
-    res.render('index', {user: req.session.user});
-});
+const requireAdmin = (req, res, next) => {
+  if (!req.user || String(req.user.role).toLowerCase() !== "admin") {
+    return res.status(403).send("Forbidden");
+  }
+  next();
+};
 
-app.get('/inventory', checkAuthenticated, checkAdmin, productController.showInventory);
-
-app.get('/register', userController.showRegister);
-app.post('/register', userController.register);
-
-app.get('/login', userController.showLogin);
-app.post('/login', userController.login);
-app.get('/login/2fa', userController.showLogin2FA);
-app.post('/login/2fa', userController.verifyLogin2FA);
-
-app.get('/2fa/setup', checkAuthenticated, userController.show2FASetup);
-app.post('/2fa/verify-setup', checkAuthenticated, userController.verify2FASetup);
-
-app.get('/admin/users', checkAuthenticated, checkAdmin, userController.listUsers);
-app.get('/admin/users/:id/edit', checkAuthenticated, checkAdmin, userController.editUserForm);
-app.post('/admin/users/:id', checkAuthenticated, checkAdmin, userController.updateUserRole);
-app.post('/admin/users/:id/delete', checkAuthenticated, checkAdmin, userController.deleteUser);
-app.post('/admin/users/:id/disable-2fa', checkAuthenticated, checkAdmin, userController.disableTwoFactor);
-
-app.get('/shopping', checkAuthenticated, checkRoles('user'), productController.showShopping);
-
-app.post('/add-to-cart/:id', checkAuthenticated, checkRoles('user'), cartController.addToCart);
-app.get('/cart', checkAuthenticated, checkRoles('user'), cartController.viewCart);
-app.post('/cart/update/:id', checkAuthenticated, checkRoles('user'), cartController.updateCartItem);
-app.post('/cart/remove/:id', checkAuthenticated, checkRoles('user'), cartController.removeCartItem);
-app.post('/checkout', checkAuthenticated, checkRoles('user'), orderController.startCheckout);
-app.get('/cart/payment', checkAuthenticated, checkRoles('user'), orderController.payment);
-app.post('/cart/payment/currency', checkAuthenticated, checkRoles('user'), orderController.setCurrency);
-app.get('/cart/checkout', checkAuthenticated, checkRoles('user'), orderController.checkout);
-app.post('/nets-qr/request', checkAuthenticated, checkRoles('user'), netsController.requestQr);
-app.get('/nets-qr/success', checkAuthenticated, checkRoles('user'), netsController.success);
-app.get('/nets-qr/fail', checkAuthenticated, checkRoles('user'), netsController.fail);
-app.get('/sse/payment-status/:txnRetrievalRef', checkAuthenticated, checkRoles('user'), netsController.streamStatus);
-app.get('/orders/history', checkAuthenticated, checkRoles('user'), orderController.history);
-app.get('/orders/:id/print', checkAuthenticated, orderController.printOrder);
-app.post('/orders/:id/delivery', checkAuthenticated, orderController.updateDeliveryDetails);
-app.post('/orders/:id/confirm-delivery', checkAuthenticated, checkRoles('user'), orderController.confirmDelivery);
-app.post('/orders/:id/retry-payment', checkAuthenticated, checkRoles('user'), orderController.retryPayment);
-app.post('/admin/orders/:id/tracking', checkAuthenticated, checkAdmin, orderController.addTracking);
-app.get('/refunds', checkAuthenticated, checkRoles('user'), refundController.list);
-app.get('/refunds/request/:orderId', checkAuthenticated, checkRoles('user'), refundController.showRequestForm);
-app.post('/refunds/request/:orderId', checkAuthenticated, checkRoles('user'), refundController.submitRequest);
-app.get('/refunds/:id', checkAuthenticated, checkRoles('user'), refundController.details);
-
-app.get('/logout', userController.logout);
-
-app.get('/product/:id', checkAuthenticated, productController.showProductDetails);
-app.post('/product/:id/reviews', checkAuthenticated, checkRoles('user'), reviewController.upsert);
-app.post('/product/:id/reviews/:reviewId/delete', checkAuthenticated, checkRoles('user'), reviewController.remove);
-
-app.get('/addProduct', checkAuthenticated, checkAdmin, productController.showAddProductForm);
-app.post('/addProduct', checkAuthenticated, checkAdmin, upload.single('image'), productController.addProduct);
-
-app.get('/updateProduct/:id', checkAuthenticated, checkAdmin, productController.showUpdateProductForm);
-app.post('/updateProduct/:id', checkAuthenticated, checkAdmin, upload.single('image'), productController.updateProduct);
-
-app.get('/deleteProduct/:id', checkAuthenticated, checkAdmin, productController.deleteProduct);
-app.get('/admin/deliveries', checkAuthenticated, checkAdmin, orderController.listAllDeliveries);
-app.get('/admin/refunds', checkAuthenticated, checkAdmin, adminRefundController.list);
-app.get('/admin/refunds/:id', checkAuthenticated, checkAdmin, adminRefundController.details);
-app.post('/admin/refunds/:id/approve', checkAuthenticated, checkAdmin, adminRefundController.approve);
-app.post('/admin/refunds/:id/reject', checkAuthenticated, checkAdmin, adminRefundController.reject);
-app.get('/admin/reports/payments', checkAuthenticated, checkAdmin, reportController.paymentsReport);
-app.post('/admin/reports/payments/fraud-test', checkAuthenticated, checkAdmin, (req, res) => {
-    fraudService.assessPaymentAttempt(req, null, (err, result) => {
-        if (err) {
-            console.error('Fraud test failed:', err);
-            req.flash('error', 'Fraud test failed.');
-            return res.redirect('/admin/reports/payments');
-        }
-
-        const flags = result.flags && result.flags.length ? result.flags.join(', ') : 'none';
-        req.flash('success', `Fraud test: action=${result.action}, risk=${result.riskScore}, flags=${flags}`);
-        return res.redirect('/admin/reports/payments');
-    });
-});
-
-app.get('/api/subscriptions', checkAuthenticated, subscriptionController.list);
-app.post('/api/subscriptions', checkAuthenticated, subscriptionController.create);
-
-app.post('/api/paypal/create-order', checkAuthenticated, checkRoles('user'), async (req, res) => {
+app.get(
+  "/dashboard/admin",
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
     try {
-        const pendingOrderId = req.session.pendingOrderId;
-        if (!pendingOrderId) {
-            return res.status(400).json({ error: 'No pending order found.' });
-        }
-
-        const orderRow = await new Promise((resolve, reject) => {
-            Order.findById(pendingOrderId, (err, rows) => {
-                if (err) return reject(err);
-                return resolve(rows && rows[0] ? rows[0] : null);
-            });
-        });
-
-        if (!orderRow) {
-            return res.status(400).json({ error: 'Pending order not found.' });
-        }
-
-        const currency = normaliseCurrency(req.session.currency || DEFAULT_CURRENCY);
-        const method = typeof req.body.method === 'string' ? req.body.method : 'paypal';
-        const exchangeRate = getExchangeRate(DEFAULT_CURRENCY, currency);
-        const amount = convertAmount(orderRow.total, DEFAULT_CURRENCY, currency).toFixed(2);
-
-        const fraudCheck = await new Promise((resolve, reject) => {
-            fraudService.assessPaymentAttempt(req, req.session.user.id, { amount }, (err, result) => {
-                if (err) {
-                    return reject(err);
-                }
-                return resolve(result);
-            });
-        });
-
-        if (fraudCheck.action === 'block') {
-            return res.status(429).json({ error: 'Payment blocked due to risk checks.' });
-        }
-
-        const order = await withRetries(
-            () => createOrder(amount, { currencyCode: currency, invoiceNumber: orderRow.invoice_number }),
-            { retries: 2, baseDelayMs: 250 }
-        );
-
-        PaymentAttempt.create({
-            userId: req.session.user.id,
-            orderId: pendingOrderId,
-            provider: 'paypal',
-            method,
-            status: 'INITIATED',
-            amount,
-            currency,
-            ipAddress: fraudCheck.ipAddress,
-            providerOrderId: order.id
-        }, () => {});
-
-        return res.json(order);
+      const [users] = await pool.query(
+        "SELECT id, name, email, role FROM users ORDER BY role, name"
+      );
+      const [courses] = await pool.query(
+        "SELECT id, course_name, category, price FROM courses ORDER BY course_name"
+      );
+      const [transactions] = await pool.query(
+        "SELECT id, user_id, type, amount, status, created_at FROM transactions ORDER BY created_at DESC"
+      );
+      res.render("adminDashboard", {
+        users,
+        courses,
+        transactions,
+        status: req.query,
+      });
     } catch (err) {
-        console.error('PayPal create order error:', err);
-        return res.status(500).json({ error: 'Failed to create PayPal order' });
+      next(err);
     }
-});
+  }
+);
 
-app.post('/api/paypal/capture-order', checkAuthenticated, checkRoles('user'), async (req, res) => {
+app.post(
+  "/admin/courses",
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
     try {
-        const { orderId, method } = req.body;
-        const capture = await withRetries(
-            () => captureOrder(orderId),
-            { retries: 2, baseDelayMs: 300 }
-        );
-        const payments = capture
-            && capture.purchase_units
-            && capture.purchase_units[0]
-            && capture.purchase_units[0].payments;
-
-        const captureId = payments
-            && payments.captures
-            && payments.captures[0]
-            && payments.captures[0].id;
-
-        const authorizationId = payments
-            && payments.authorizations
-            && payments.authorizations[0]
-            && payments.authorizations[0].id;
-
-        if (!capture || capture.status !== 'COMPLETED') {
-            PaymentAttempt.updateStatusByProviderOrder(orderId, 'FAILED', 'Capture not completed', () => {});
-            return res.status(400).json({ error: 'Payment capture not completed.' });
-        }
-
-        const paymentId = captureId || authorizationId || null;
-        if (!paymentId) {
-            PaymentAttempt.updateStatusByProviderOrder(orderId, 'FAILED', 'Missing capture ID', () => {});
-            return res.status(400).json({ error: 'Payment capture incomplete.' });
-        }
-
-        const paymentMethod = typeof method === 'string' ? method : 'paypal';
-        req.session.payment = { method: paymentMethod, captureId: paymentId };
-        PaymentAttempt.updateStatusByProviderOrder(orderId, 'SUCCEEDED', null, () => {});
-        return res.json(capture);
+      const { course_name, category, price, description, instructor_id } =
+        req.body;
+      if (!course_name || !price) {
+        return res.redirect("/dashboard/admin?course_error=1");
+      }
+      await pool.query(
+        "INSERT INTO courses (course_name, category, price, description, instructor_id) VALUES (?, ?, ?, ?, ?)",
+        [course_name, category || null, price, description || null, instructor_id || null]
+      );
+      res.redirect("/dashboard/admin?course_created=1");
     } catch (err) {
-        console.error('PayPal capture error:', err);
-        PaymentAttempt.updateStatusByProviderOrder(req.body.orderId, 'FAILED', err.message || 'Capture failed', () => {});
-        if (req.session && req.session.pendingOrderId) {
-            Order.incrementPaymentAttempts(req.session.pendingOrderId, err.message || 'Capture failed', () => {});
-            Order.findById(req.session.pendingOrderId, (findErr, rows) => {
-                if (!findErr && rows && rows[0]) {
-                    Notifications.sendPaymentUpdate(req.session.user, rows[0], 'failed');
-                }
-            });
-        }
-        return res.status(500).json({ error: 'Failed to capture PayPal order' });
+      next(err);
     }
-});
+  }
+);
 
-app.post('/api/stripe/create-checkout-session', checkAuthenticated, checkRoles('user'), async (req, res) => {
+app.post(
+  "/admin/courses/:id/update",
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
     try {
-        const pendingOrderId = req.session.pendingOrderId;
-        if (!pendingOrderId) {
-            return res.status(400).json({ error: 'No pending order found.' });
-        }
-
-        const orderRow = await new Promise((resolve, reject) => {
-            Order.findById(pendingOrderId, (err, rows) => {
-                if (err) return reject(err);
-                return resolve(rows && rows[0] ? rows[0] : null);
-            });
-        });
-
-        if (!orderRow) {
-            return res.status(400).json({ error: 'Pending order not found.' });
-        }
-
-        const currency = normaliseCurrency(req.session.currency || DEFAULT_CURRENCY);
-        const amount = convertAmount(orderRow.total, DEFAULT_CURRENCY, currency).toFixed(2);
-        const host = `${req.protocol}://${req.get('host')}`;
-
-        const fraudCheck = await new Promise((resolve, reject) => {
-            fraudService.assessPaymentAttempt(req, req.session.user.id, { amount }, (err, result) => {
-                if (err) {
-                    return reject(err);
-                }
-                return resolve(result);
-            });
-        });
-
-        if (fraudCheck.action === 'block') {
-            return res.status(429).json({ error: 'Payment blocked due to risk checks.' });
-        }
-
-        const session = await createCheckoutSession({
-            amount,
-            currency,
-            description: `Order #${orderRow.id}`,
-            successUrl: `${host}/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${host}/stripe/cancel`,
-            metadata: {
-                orderId: String(orderRow.id)
-            },
-            customerEmail: req.session.user && req.session.user.email ? req.session.user.email : undefined,
-            clientReferenceId: String(orderRow.id)
-        });
-
-        PaymentAttempt.create({
-            userId: req.session.user.id,
-            orderId: pendingOrderId,
-            provider: 'stripe',
-            method: 'card',
-            status: 'INITIATED',
-            amount,
-            currency,
-            ipAddress: fraudCheck.ipAddress,
-            providerOrderId: session.id
-        }, () => {});
-
-        return res.json({ url: session.url });
-    } catch (err) {
-        console.error('Stripe checkout session error:', err);
-        return res.status(500).json({ error: 'Failed to create Stripe checkout session.' });
-    }
-});
-
-app.get('/stripe/success', checkAuthenticated, checkRoles('user'), async (req, res) => {
-    const sessionId = String(req.query.session_id || '').trim();
-    if (!sessionId) {
-        req.flash('error', 'Stripe session not found.');
-        return res.redirect('/cart/payment');
-    }
-
-    try {
-        const session = await retrieveCheckoutSession(sessionId);
-        const paymentStatus = String(session.payment_status || '').toLowerCase();
-        const isPaid = paymentStatus === 'paid' || session.status === 'complete';
-
-        if (!isPaid) {
-            PaymentAttempt.updateStatusByProviderOrder(sessionId, 'FAILED', 'Stripe payment not completed', () => {});
-            req.flash('error', 'Stripe payment was not completed.');
-            return res.redirect('/cart/payment');
-        }
-
-        const paymentIntentId = session.payment_intent ? String(session.payment_intent) : sessionId;
-        req.session.payment = { method: 'stripe', captureId: paymentIntentId };
-        PaymentAttempt.updateStatusByProviderOrder(sessionId, 'SUCCEEDED', null, () => {});
-        return req.session.save(() => res.redirect('/cart/checkout'));
-    } catch (err) {
-        console.error('Stripe success verify error:', err);
-        PaymentAttempt.updateStatusByProviderOrder(sessionId, 'FAILED', err.message || 'Stripe verification failed', () => {});
-        req.flash('error', 'Stripe verification failed.');
-        return res.redirect('/cart/payment');
-    }
-});
-
-app.get('/stripe/cancel', checkAuthenticated, checkRoles('user'), (req, res) => {
-    req.flash('error', 'Stripe payment cancelled.');
-    return res.redirect('/cart/payment');
-});
-
-app.post('/api/payments/mark-failed', checkAuthenticated, checkRoles('user'), orderController.markPaymentFailed);
-
-// Friendly 404 page
-app.use((req, res) => {
-    res.status(404).render('error', {
-        title: 'Page not found',
-        statusCode: 404,
-        message: "We couldn't find that page.",
-        actions: [
-            { label: 'Go to Home', href: '/' },
-            { label: 'Browse Products', href: '/shopping' }
+      const { course_name, category, price, description, instructor_id } =
+        req.body;
+      await pool.query(
+        "UPDATE courses SET course_name = ?, category = ?, price = ?, description = ?, instructor_id = ? WHERE id = ?",
+        [
+          course_name,
+          category || null,
+          price,
+          description || null,
+          instructor_id || null,
+          req.params.id,
         ]
-    });
+      );
+      res.redirect("/dashboard/admin?course_updated=1");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+app.post(
+  "/admin/courses/:id/delete",
+  authenticateToken,
+  requireAdmin,
+  async (req, res, next) => {
+    try {
+      await pool.query("DELETE FROM courses WHERE id = ?", [req.params.id]);
+      res.redirect("/dashboard/admin?course_deleted=1");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+app.post("/wallet/topup", authenticateToken, async (req, res, next) => {
+  try {
+    const amount = Number(req.body.amount || 0);
+    if (!amount || amount <= 0) {
+      return res.redirect("/dashboard/student?topup_error=1");
+    }
+    const userId = req.user.id;
+    await pool.query(
+      "INSERT INTO wallet (user_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)",
+      [userId, amount]
+    );
+    await pool.query(
+      "INSERT INTO transactions (user_id, type, amount, status) VALUES (?, ?, ?, ?)",
+      [userId, "wallet_topup", amount, "completed"]
+    );
+    res.redirect("/dashboard/student?topup_success=1");
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Friendly error handler
+app.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.redirect("/login");
+});
+
+app.post("/courses/:id/pay", async (req, res, next) => {
+  try {
+    const paymentMethod = req.body.payment_method || "paypal";
+    res.redirect(
+      `/courses/${req.params.id}?paid=1&method=${encodeURIComponent(
+        paymentMethod
+      )}`
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-    const statusCode = err.status || 500;
-    res.status(statusCode).render('error', {
-        title: statusCode === 404 ? 'Page not found' : 'Something went wrong',
-        statusCode,
-        message: statusCode === 404
-            ? "We couldn't find that page."
-            : 'Please try again in a moment.',
-        actions: [
-            { label: 'Go to Home', href: '/' },
-            { label: 'Back to Login', href: '/login' }
-        ],
-        details: process.env.NODE_ENV === 'development' ? err.message : null
-    });
+  console.error(err);
+  res.status(500).send("Server error");
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-
-setInterval(subscriptionService.processDueSubscriptions, 30 * 60 * 1000);
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
