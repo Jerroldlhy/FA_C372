@@ -1,0 +1,76 @@
+<%- include('partials/header', { pageTitle: 'Course Details', user, messages, errors }) %>
+<section class="section-card p-4 p-md-5">
+  <div class="mb-4">
+    <a class="btn btn-link px-0" href="/">Back to catalog</a>
+    <h1 class="display-6 fw-semibold"><%= course.course_name %></h1>
+    <p class="text-muted mb-0">
+      Instructor: <%= course.instructor_name || course.instructor_username || "TBA" %>
+    </p>
+  </div>
+
+  <% if (status && status.enrolled) { %>
+    <div class="alert alert-success">Enrollment successful.</div>
+  <% } %>
+
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Course Description</h5>
+          <p class="card-text mb-0"><%= course.description || "No description available." %></p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Learning Outcomes</h5>
+          <% const outcomes = course.learning_outcomes
+            ? String(course.learning_outcomes).split(/\r?\n|;/).map(s => s.trim()).filter(Boolean)
+            : []; %>
+          <% if (outcomes.length) { %>
+            <ul class="mb-0">
+              <% outcomes.forEach(function(item) { %>
+                <li><%= item %></li>
+              <% }); %>
+            </ul>
+          <% } else { %>
+            <p class="mb-0 text-muted">Learning outcomes will be provided soon.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Resources</h5>
+          <% const resources = course.resources
+            ? String(course.resources).split(/\r?\n|,/).map(s => s.trim()).filter(Boolean)
+            : []; %>
+          <% if (resources.length) { %>
+            <ul class="mb-0">
+              <% resources.forEach(function(item) { %>
+                <li><%= item %></li>
+              <% }); %>
+            </ul>
+          <% } else { %>
+            <p class="mb-0 text-muted">No resources uploaded yet (videos/PDFs).</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Pricing</h5>
+          <p class="display-6 fw-semibold mb-2">$<%= Number(course.price || 0).toFixed(2) %></p>
+          <p class="text-muted mb-4">Category: <%= course.category || "N/A" %></p>
+
+          <form method="POST" action="/courses/<%= course.course_id %>/enroll">
+            <button class="btn btn-primary w-100" type="submit">Enroll Now</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<%- include('partials/footer') %>

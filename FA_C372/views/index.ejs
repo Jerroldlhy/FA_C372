@@ -1,0 +1,161 @@
+<%- include('partials/header', { pageTitle: 'Home', user, messages, errors }) %>
+<section class="section-card p-4 p-md-5">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="display-6 fw-semibold mb-1">Available Courses</h1>
+      <p class="text-muted mb-0">Browse our catalog and find the right course for you.</p>
+    </div>
+  </div>
+
+  <% const categories = [...new Set((courses || []).map(c => c.category).filter(Boolean))]; %>
+  <% const levels = [...new Set((courses || []).map(c => c.skill_level).filter(Boolean))]; %>
+  <% const languages = [...new Set((courses || []).map(c => c.language).filter(Boolean))]; %>
+
+  <form id="courseFilterForm" class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <label for="filterCategory" class="form-label">Category</label>
+      <select id="filterCategory" class="form-select">
+        <option value="">All Categories</option>
+        <% categories.forEach(function(category) { %>
+          <option value="<%= category %>"><%= category %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label for="filterLevel" class="form-label">Skill Level</label>
+      <select id="filterLevel" class="form-select">
+        <option value="">All Levels</option>
+        <% levels.forEach(function(level) { %>
+          <option value="<%= level %>"><%= level %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label for="filterLanguage" class="form-label">Language</label>
+      <select id="filterLanguage" class="form-select">
+        <option value="">All Languages</option>
+        <% languages.forEach(function(language) { %>
+          <option value="<%= language %>"><%= language %></option>
+        <% }); %>
+      </select>
+    </div>
+  </form>
+
+  <% if (!courses || courses.length === 0) { %>
+    <div class="alert alert-info">No courses available right now.</div>
+  <% } else { %>
+    <div id="courseList" class="row g-4">
+      <% courses.forEach(function(course) { %>
+        <div
+          class="col-12 col-sm-6 col-lg-4 course-item"
+          data-category="<%= course.category || '' %>"
+          data-level="<%= course.skill_level || '' %>"
+          data-language="<%= course.language || '' %>"
+        >
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex align-items-start justify-content-between mb-2">
+                <h5 class="card-title mb-0"><%= course.course_name %></h5>
+                <span class="badge text-bg-primary">$<%= Number(course.price).toFixed(2) %></span>
+              </div>
+              <p class="text-muted mb-1">Category: <%= course.category || "N/A" %></p>
+              <p class="text-muted mb-1">Level: <%= course.skill_level || "N/A" %></p>
+              <p class="text-muted mb-3">Language: <%= course.language || "N/A" %></p>
+              <p class="small text-secondary mb-4">
+                Instructor: <%= course.instructor_name || course.instructor_username || "TBA" %>
+              </p>
+              <a class="btn btn-outline-primary mt-auto" href="/courses/<%= course.course_id %>">View Details</a>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <div id="paginationInfo" class="small text-muted"></div>
+      <nav aria-label="Course pagination">
+        <ul id="pagination" class="pagination pagination-sm mb-0"></ul>
+      </nav>
+    </div>
+  <% } %>
+</section>
+
+<script>
+  (() => {
+    const itemsPerPage = 6;
+    const items = Array.from(document.querySelectorAll(".course-item"));
+    if (!items.length) return;
+
+    const filterCategory = document.getElementById("filterCategory");
+    const filterLevel = document.getElementById("filterLevel");
+    const filterLanguage = document.getElementById("filterLanguage");
+    const pagination = document.getElementById("pagination");
+    const paginationInfo = document.getElementById("paginationInfo");
+
+    let currentPage = 1;
+    let filteredItems = items;
+
+    function applyFilters() {
+      const category = (filterCategory && filterCategory.value || "").toLowerCase();
+      const level = (filterLevel && filterLevel.value || "").toLowerCase();
+      const language = (filterLanguage && filterLanguage.value || "").toLowerCase();
+
+      filteredItems = items.filter((item) => {
+        const itemCategory = (item.dataset.category || "").toLowerCase();
+        const itemLevel = (item.dataset.level || "").toLowerCase();
+        const itemLanguage = (item.dataset.language || "").toLowerCase();
+        return (!category || itemCategory === category) &&
+          (!level || itemLevel === level) &&
+          (!language || itemLanguage === language);
+      });
+
+      currentPage = 1;
+      render();
+    }
+
+    function render() {
+      const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      items.forEach((item) => {
+        item.style.display = "none";
+      });
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      filteredItems.slice(start, end).forEach((item) => {
+        item.style.display = "";
+      });
+
+      if (paginationInfo) {
+        if (!filteredItems.length) {
+          paginationInfo.textContent = "No courses match the selected filters.";
+        } else {
+          paginationInfo.textContent = `Showing ${start + 1}-${Math.min(end, filteredItems.length)} of ${filteredItems.length} course(s)`;
+        }
+      }
+
+      if (!pagination) return;
+      pagination.innerHTML = "";
+      for (let page = 1; page <= totalPages; page += 1) {
+        const li = document.createElement("li");
+        li.className = `page-item ${page === currentPage ? "active" : ""}`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "page-link";
+        button.textContent = String(page);
+        button.addEventListener("click", () => {
+          currentPage = page;
+          render();
+        });
+        li.appendChild(button);
+        pagination.appendChild(li);
+      }
+    }
+
+    if (filterCategory) filterCategory.addEventListener("change", applyFilters);
+    if (filterLevel) filterLevel.addEventListener("change", applyFilters);
+    if (filterLanguage) filterLanguage.addEventListener("change", applyFilters);
+    render();
+  })();
+</script>
+<%- include('partials/footer') %>

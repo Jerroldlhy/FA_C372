@@ -1,0 +1,62 @@
+<%- include('partials/header', { pageTitle: 'Login', user, messages, errors }) %>
+<section class="auth-wrapper">
+  <div class="auth-panel shadow-sm">
+    <div class="auth-header">
+      <h1 class="auth-title">Login</h1>
+      <p class="auth-sub">Access your account</p>
+    </div>
+
+    <div id="loginAlert" class="d-none alert" role="alert"></div>
+
+    <form id="loginForm" class="auth-form" novalidate>
+      <div class="form-floating mb-3">
+        <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+        <label for="email">Email</label>
+      </div>
+      <div class="form-floating mb-4">
+        <input type="password" class="form-control" id="password" name="password" placeholder="Password" minlength="6" required>
+        <label for="password">Password</label>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 mb-2">Login</button>
+      <div class="auth-alt small">No account? <a href="/signup">Sign up</a></div>
+    </form>
+  </div>
+</section>
+<script>
+  const form = document.getElementById("loginForm");
+  const alertBox = document.getElementById("loginAlert");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    alertBox.className = "d-none alert";
+    alertBox.textContent = "";
+
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.value.trim(),
+          password: form.password.value,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alertBox.className = "alert alert-danger";
+        alertBox.textContent = data.error || "Login failed.";
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      const role = data.user && data.user.role ? data.user.role : "student";
+      if (role === "admin") window.location.href = "/dashboard/admin";
+      else if (role === "lecturer") window.location.href = "/dashboard/lecturer";
+      else window.location.href = "/dashboard/student";
+    } catch (err) {
+      alertBox.className = "alert alert-danger";
+      alertBox.textContent = "Unable to log in right now.";
+    }
+  });
+</script>
+<%- include('partials/footer') %>

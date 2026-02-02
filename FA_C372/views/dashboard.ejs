@@ -10,7 +10,7 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="/styles/style.css" />
+    <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
     <main class="container py-5">
@@ -42,7 +42,7 @@
                     <tr>
                       <th>Course</th>
                       <th>Category</th>
-                      <th>Progress</th>
+                      <th>Price</th>
                       <th>Details</th>
                     </tr>
                   </thead>
@@ -58,20 +58,7 @@
                         <tr>
                           <td><%= item.course_name %></td>
                           <td><%= item.category %></td>
-                          <td style="min-width: 140px;">
-                            <% const progress = Number(item.progress || 0); %>
-                            <div class="progress" style="height: 8px;">
-                              <div
-                                class="progress-bar"
-                                role="progressbar"
-                                style="width: <%= progress %>%"
-                                aria-valuenow="<%= progress %>"
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                              ></div>
-                            </div>
-                            <small class="text-muted"><%= progress %>%</small>
-                          </td>
+                          <td>$<%= Number(item.price).toFixed(2) %></td>
                           <td>
                             <a
                               class="btn btn-sm btn-outline-primary"
@@ -135,9 +122,9 @@
                     <% } else { %>
                       <% transactions.forEach(function(tx) { %>
                         <tr>
-                          <td class="text-capitalize"><%= tx.type %></td>
+                          <td class="text-capitalize"><%= tx.transaction_type %></td>
                           <td>$<%= Number(tx.amount).toFixed(2) %></td>
-                          <td class="text-capitalize"><%= tx.status %></td>
+                          <td class="text-capitalize"><%= tx.transaction_status %></td>
                         </tr>
                       <% }); %>
                     <% } %>

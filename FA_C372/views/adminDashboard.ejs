@@ -10,7 +10,7 @@
       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="/styles/style.css" />
+    <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
     <main class="container py-5">
@@ -58,8 +58,12 @@
                     <% } else { %>
                       <% users.forEach(function(user) { %>
                         <tr>
-                          <td><%= user.id %></td>
-                          <td><%= user.name %></td>
+                          <td><%= user.user_id %></td>
+                          <td>
+                            <%= user.first_name && user.last_name
+                              ? user.first_name + " " + user.last_name
+                              : user.username %>
+                          </td>
                           <td><%= user.email %></td>
                           <td class="text-capitalize"><%= user.role %></td>
                         </tr>
@@ -102,6 +106,14 @@
                       min="0"
                       required
                     />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="skill_level">Skill Level</label>
+                    <input class="form-control" id="skill_level" name="skill_level" />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="language">Language</label>
+                    <input class="form-control" id="language" name="language" />
                   </div>
                   <div class="col-12">
                     <label class="form-label" for="description">Description</label>
@@ -146,6 +158,8 @@
                       <th>ID</th>
                       <th>Course</th>
                       <th>Category</th>
+                      <th>Level</th>
+                      <th>Language</th>
                       <th>Price</th>
                       <th>Actions</th>
                     </tr>
@@ -153,13 +167,13 @@
                   <tbody>
                     <% if (!courses || courses.length === 0) { %>
                       <tr>
-                        <td colspan="5" class="text-muted">No courses found.</td>
+                        <td colspan="7" class="text-muted">No courses found.</td>
                       </tr>
                     <% } else { %>
                       <% courses.forEach(function(course) { %>
                         <tr>
-                          <form method="POST" action="/admin/courses/<%= course.id %>/update">
-                            <td><%= course.id %></td>
+                          <form method="POST" action="/admin/courses/<%= course.course_id %>/update">
+                            <td><%= course.course_id %></td>
                             <td>
                               <input
                                 class="form-control form-control-sm"
@@ -178,6 +192,20 @@
                             <td>
                               <input
                                 class="form-control form-control-sm"
+                                name="skill_level"
+                                value="<%= course.skill_level || '' %>"
+                              />
+                            </td>
+                            <td>
+                              <input
+                                class="form-control form-control-sm"
+                                name="language"
+                                value="<%= course.language || '' %>"
+                              />
+                            </td>
+                            <td>
+                              <input
+                                class="form-control form-control-sm"
                                 name="price"
                                 type="number"
                                 step="0.01"
@@ -191,7 +219,7 @@
                                 Save
                               </button>
                           </form>
-                          <form method="POST" action="/admin/courses/<%= course.id %>/delete">
+                          <form method="POST" action="/admin/courses/<%= course.course_id %>/delete">
                             <button
                               class="btn btn-sm btn-outline-danger"
                               type="submit"
@@ -237,11 +265,11 @@
                     <% } else { %>
                       <% transactions.forEach(function(tx) { %>
                         <tr>
-                          <td><%= tx.id %></td>
+                          <td><%= tx.transaction_id %></td>
                           <td><%= tx.user_id %></td>
-                          <td class="text-capitalize"><%= tx.type %></td>
+                          <td class="text-capitalize"><%= tx.transaction_type %></td>
                           <td>$<%= Number(tx.amount).toFixed(2) %></td>
-                          <td class="text-capitalize"><%= tx.status %></td>
+                          <td class="text-capitalize"><%= tx.transaction_status %></td>
                           <td>
                             <%= tx.created_at ? new Date(tx.created_at).toLocaleString() : "" %>
                           </td>
