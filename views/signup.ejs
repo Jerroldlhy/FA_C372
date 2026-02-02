@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Create Account</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=Space+Grotesk:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-wrapper">
+      <a class="back-link" href="/">&larr; Back to Home</a>
+      <section class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark"></span>
+          <span>EduSphere</span>
+        </div>
+        <h1>Create Account</h1>
+        <p class="auth-subtitle">Start your learning journey today</p>
+
+        <% if (error) { %>
+          <div class="auth-alert"><%= error %></div>
+        <% } %>
+        <form method="POST" action="/signup" class="auth-form" novalidate>
+          <div class="auth-grid">
+            <label>
+              First Name
+              <input type="text" name="first_name" placeholder="John" required />
+            </label>
+            <label>
+              Last Name
+              <input type="text" name="last_name" placeholder="Doe" required />
+            </label>
+          </div>
+          <label>
+            Email Address
+            <input
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+          <label>
+            Password
+            <div class="password-field">
+              <input
+                type="password"
+                name="password"
+                placeholder="Create a strong password"
+                required
+              />
+              <span class="eye-icon"></span>
+            </div>
+            <small>Must be at least 8 characters with numbers and letters</small>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" required />
+            <span class="checkbox-text">
+              I agree to the <a href="#">Terms of Service</a> and
+              <a href="#">Privacy Policy</a>
+            </span>
+          </label>
+          <button type="submit" class="btn btn-primary auth-submit">
+            Create Account
+          </button>
+        </form>
+
+        <div class="auth-divider">
+          <span>Or sign up with</span>
+        </div>
+        <button class="btn btn-outline auth-social">
+          <span class="google-icon">G</span> Google
+        </button>
+
+        <p class="auth-footer">
+          Already have an account? <a href="/login">Log in</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

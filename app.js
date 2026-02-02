@@ -78,6 +78,10 @@ app.get("/login", (req, res) => {
   res.render("login", { error: null });
 });
 
+app.get("/signup", (req, res) => {
+  res.render("signup", { error: null });
+});
+
 app.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -126,6 +130,55 @@ app.post("/login", async (req, res, next) => {
   }
 });
 
+app.post("/signup", async (req, res, next) => {
+  try {
+    const { first_name, last_name, email, password } = req.body;
+    if (!first_name || !last_name || !email || !password) {
+      return res.status(400).render("signup", {
+        error: "All fields are required.",
+      });
+    }
+
+    const [existing] = await pool.query(
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
+      [email]
+    );
+    if (existing.length) {
+      return res.status(409).render("signup", {
+        error: "An account with this email already exists.",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const name = `${first_name} ${last_name}`.trim();
+    await pool.query(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+      [name, email, passwordHash, "student"]
+    );
+
+    return res.redirect("/login");
+  } catch (err) {
+    next(err);
+  }
+});
+
+const authenticateToken = (req, res, next) => {
+  const token = req.cookies ? req.cookies.token : null;
+  if (!token) {
+    return res.redirect("/login");
+  }
+  try {
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "dev_secret_change_me"
+    );
+    req.user = payload;
+    next();
+  } catch (err) {
+    return res.redirect("/login");
+  }
+};
+
 app.get("/dashboard/student", authenticateToken, async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -166,23 +219,6 @@ app.get("/dashboard/student", authenticateToken, async (req, res, next) => {
 app.get("/dashboard/lecturer", (req, res) => {
   res.render("dashboard");
 });
-
-const authenticateToken = (req, res, next) => {
-  const token = req.cookies ? req.cookies.token : null;
-  if (!token) {
-    return res.redirect("/login");
-  }
-  try {
-    const payload = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "dev_secret_change_me"
-    );
-    req.user = payload;
-    next();
-  } catch (err) {
-    return res.redirect("/login");
-  }
-};
 
 const requireAdmin = (req, res, next) => {
   if (!req.user || String(req.user.role).toLowerCase() !== "admin") {
