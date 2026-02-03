@@ -25,6 +25,20 @@
           <h1 class="display-4 fw-bold">Invest in Your Future</h1>
           <p class="lead text-muted">Choose a plan that fits your learning journey.</p>
         </header>
+        <% if (status?.subscription_success) { %>
+          <div class="alert alert-success">
+            Subscription updated successfully to <strong><%= (status.plan || "").toUpperCase() %></strong>.
+          </div>
+        <% } %>
+        <% if (status?.subscription_error === "invalid_plan") { %>
+          <div class="alert alert-danger">Selected plan is invalid. Please try again.</div>
+        <% } %>
+        <% if (currentSubscription) { %>
+          <div class="alert alert-info">
+            Current plan: <strong><%= currentSubscription.plan_name %></strong>
+            (<%= currentSubscription.status %>)
+          </div>
+        <% } %>
 
         <div class="plans-grid">
           <% plans.forEach(function(plan, index) { %>
@@ -45,15 +59,28 @@
                   <li><span class="perk-dot"></span><%= perk %></li>
                 <% }); %>
               </ul>
-              <button class="btn plan-btn mt-auto<%= index === 1 ? ' btn-primary' : ' btn-outline' %>">
-                <% if (plan.price === 0) { %>
-                  Get Started
-                <% } else if (plan.price === "Custom") { %>
-                  Contact Sales
-                <% } else { %>
-                  Start Free Trial
-                <% } %>
-              </button>
+              <% const isLoggedStudent = currentUser && String(currentUser.role).toLowerCase() === "student"; %>
+              <% const isActivePlan = currentSubscription && currentSubscription.plan_code === plan.code; %>
+              <% if (isLoggedStudent) { %>
+                <form method="POST" action="/plans/subscribe" class="mt-auto">
+                  <input type="hidden" name="plan_code" value="<%= plan.code %>" />
+                  <button
+                    class="btn plan-btn w-100<%= index === 1 ? ' btn-primary' : ' btn-outline' %>"
+                    type="submit"
+                    <%= isActivePlan ? "disabled" : "" %>
+                  >
+                    <%= isActivePlan ? "Current Plan" : plan.cta %>
+                  </button>
+                </form>
+              <% } else if (currentUser) { %>
+                <button class="btn plan-btn mt-auto<%= index === 1 ? ' btn-primary' : ' btn-outline' %>" disabled>
+                  Student plan only
+                </button>
+              <% } else { %>
+                <a class="btn plan-btn mt-auto<%= index === 1 ? ' btn-primary' : ' btn-outline' %>" href="/login">
+                  Log in to subscribe
+                </a>
+              <% } %>
             </article>
           <% }); %>
         </div>

@@ -1,27 +1,28 @@
 const pool = require("./db");
 
-const createReview = async ({ user_id, course_id, rating, feedback }) => {
-  const [result] = await pool.query(
-    `INSERT INTO reviews (user_id, course_id, rating, feedback)
-     VALUES (?, ?, ?, ?)`,
-    [user_id, course_id, rating, feedback || null]
-  );
-  return result.insertId;
-};
-
-const listReviewsByCourse = async (courseId) => {
+const getReviewsForCourses = async (courseIds) => {
+  if (!courseIds.length) return [];
   const [rows] = await pool.query(
-    `SELECT r.review_id, r.rating, r.feedback, r.created_at, u.user_id, u.username
-     FROM reviews r
-     INNER JOIN users u ON r.user_id = u.user_id
-     WHERE r.course_id = ?
+    `SELECT r.*, u.name AS student_name
+     FROM course_reviews r
+     JOIN users u ON r.student_id = u.id
+     WHERE r.course_id IN (?)
      ORDER BY r.created_at DESC`,
-    [courseId]
+    [courseIds]
   );
   return rows;
 };
 
+const upsertReview = async (courseId, studentId, rating, reviewText) => {
+  await pool.query(
+    `INSERT INTO course_reviews (course_id, student_id, rating, review)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE rating = VALUES(rating), review = VALUES(review), created_at = CURRENT_TIMESTAMP`,
+    [courseId, studentId, rating, reviewText]
+  );
+};
+
 module.exports = {
-  createReview,
-  listReviewsByCourse,
+  getReviewsForCourses,
+  upsertReview,
 };

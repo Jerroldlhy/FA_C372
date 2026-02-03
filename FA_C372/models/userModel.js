@@ -1,62 +1,73 @@
 const pool = require("./db");
 
-const findByEmail = async (email) => {
+const getUserByEmail = async (email) => {
   const [rows] = await pool.query(
-    "SELECT user_id, email, password, role, username, first_name, last_name FROM users WHERE email = ? LIMIT 1",
+    "SELECT id, name, email, password_hash, role, email_verified FROM users WHERE email = ? LIMIT 1",
     [email]
   );
   return rows[0] || null;
 };
 
-const createUser = async ({ username, email, password, role }) => {
+const createUser = async (name, email, passwordHash, role, verificationToken) => {
   const [result] = await pool.query(
-    "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
-    [username, email, password, role]
+    "INSERT INTO users (name, email, password_hash, role, verification_token) VALUES (?, ?, ?, ?, ?)",
+    [name, email, passwordHash, role, verificationToken]
   );
   return result.insertId;
 };
 
-const findById = async (userId) => {
-  const [rows] = await pool.query(
-    `SELECT user_id, username, first_name, last_name, email, role, created_at
-     FROM users
-     WHERE user_id = ?
-     LIMIT 1`,
+const updateVerificationToken = async (userId, token) => {
+  await pool.query(
+    "UPDATE users SET verification_token = ? WHERE id = ?",
+    [token, userId]
+  );
+};
+
+const markEmailVerified = async (userId) => {
+  await pool.query(
+    "UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?",
     [userId]
+  );
+};
+
+const getUserByVerificationToken = async (token) => {
+  const [rows] = await pool.query(
+    "SELECT id, email_verified FROM users WHERE verification_token = ? LIMIT 1",
+    [token]
   );
   return rows[0] || null;
 };
 
-const listUsers = async (role) => {
+const getAllUsers = async () => {
   const [rows] = await pool.query(
-    `SELECT user_id, username, first_name, last_name, email, role
-     FROM users
-     ${role ? "WHERE role = ?" : ""}
-     ORDER BY role, username`,
-    role ? [role] : []
+    "SELECT id, name, email, role FROM users ORDER BY role, name"
   );
   return rows;
 };
 
-const updateUserRole = async (userId, role) => {
-  await pool.query("UPDATE users SET role = ? WHERE user_id = ?", [role, userId]);
+const getLecturers = async () => {
+  const [rows] = await pool.query(
+    "SELECT id, name FROM users WHERE role = 'lecturer' ORDER BY name"
+  );
+  return rows;
 };
 
-const deleteUserById = async (userId) => {
-  await pool.query("DELETE FROM users WHERE user_id = ?", [userId]);
-};
-
-const countUsers = async () => {
-  const [[row]] = await pool.query("SELECT COUNT(*) AS total_users FROM users");
-  return row.total_users || 0;
+const isLecturerId = async (id) => {
+  if (!id) return false;
+  const [rows] = await pool.query(
+    "SELECT id FROM users WHERE id = ? AND role = 'lecturer' LIMIT 1",
+    [id]
+  );
+  return rows.length > 0;
 };
 
 module.exports = {
-  findByEmail,
-  findById,
+  getUserByEmail,
   createUser,
-  listUsers,
-  updateUserRole,
-  deleteUserById,
-  countUsers,
+  updateVerificationToken,
+  markEmailVerified,
+  getUserByVerificationToken,
+  getAllUsers,
+  getLecturers,
+  isLecturerId,
 };

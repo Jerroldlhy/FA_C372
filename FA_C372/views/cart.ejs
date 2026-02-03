@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Cart</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="course-page">
+    <%- include("partials/navbar") %>
+    <main class="section">
+      <div class="container">
+        <div class="course-hero mb-4">
+          <div>
+            <p class="eyebrow text-uppercase text-muted mb-2">Checkout</p>
+            <h1 class="display-6 fw-bold mb-1">Your Cart</h1>
+            <p class="text-muted mb-0">Review selected courses before payment.</p>
+          </div>
+          <div class="course-hero-card">
+            <p class="text-muted small mb-1">Items</p>
+            <strong class="display-6"><%= items.length %></strong>
+            <p class="text-muted small mb-0">Total: $<%= Number(total || 0).toFixed(2) %></p>
+          </div>
+        </div>
+
+        <% if (status?.removed) { %>
+          <div class="alert alert-info">Item removed from cart.</div>
+        <% } %>
+        <% if (status?.checkout_error === "wallet_balance") { %>
+          <div class="alert alert-danger">Insufficient wallet balance for checkout.</div>
+        <% } %>
+        <% if (status?.checkout_error === "empty_cart") { %>
+          <div class="alert alert-warning">Your cart is empty.</div>
+        <% } %>
+        <% if (status?.checkout_error === "out_of_stock") { %>
+          <div class="alert alert-danger">One or more courses are out of stock.</div>
+        <% } %>
+        <% if (status?.checkout_error === "already_enrolled") { %>
+          <div class="alert alert-info">All cart items are already in your enrollments.</div>
+        <% } %>
+        <% if (status?.checkout_error === "payment_required") { %>
+          <div class="alert alert-warning">Complete your external payment first, then place order.</div>
+        <% } %>
+        <% if (status?.payment_ready) { %>
+          <div class="alert alert-success text-capitalize"><%= status.payment_ready %> payment verified. You can place the order now.</div>
+        <% } %>
+        <% if (status?.payment_error) { %>
+          <div class="alert alert-danger text-capitalize">Payment issue: <%= status.payment_error.replace(/_/g, " ") %>.</div>
+        <% } %>
+
+        <div class="dashboard-panel">
+          <% if (!items.length) { %>
+            <div class="empty-state">No items in cart yet. Browse courses to add one.</div>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table align-middle mb-4">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% items.forEach(function(item) { %>
+                    <tr>
+                      <td>
+                        <strong><%= item.course_name %></strong>
+                        <div class="text-muted small">
+                          <%= item.level || "General" %> · <%= item.language || "N/A" %>
+                        </div>
+                      </td>
+                      <td><%= item.category || "General" %></td>
+                      <td>$<%= Number(item.price || 0).toFixed(2) %></td>
+                      <td class="text-end">
+                        <form method="POST" action="/cart/<%= item.course_id %>/remove">
+                          <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                        </form>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+            <div class="dashboard-panel mb-3">
+              <h5 class="mb-2">Payment Methods</h5>
+              <p class="text-muted small mb-3">
+                Choose a method below, complete payment, then place your order.
+                Apple Pay / Google Pay can be supported through Stripe account settings.
+              </p>
+
+              <div class="row g-2 mb-3">
+                <div class="col-12 col-md-3">
+                  <button class="btn btn-outline w-100" type="button" data-method="wallet" id="methodWallet">Wallet</button>
+                </div>
+                <div class="col-12 col-md-3">
+                  <button class="btn btn-outline w-100" type="button" data-method="paypal" id="methodPaypal">PayPal</button>
+                </div>
+                <div class="col-12 col-md-3">
+                  <button class="btn btn-outline w-100" type="button" data-method="stripe" id="methodStripe">Stripe Card</button>
+                </div>
+                <div class="col-12 col-md-3">
+                  <button class="btn btn-outline w-100" type="button" data-method="nets" id="methodNets">NETS QR</button>
+                </div>
+              </div>
+
+              <div id="actionWallet" class="payment-action">
+                <p class="small text-muted mb-2">No pre-step needed. Click <strong>Place order</strong> using wallet.</p>
+              </div>
+
+              <div id="actionPaypal" class="payment-action d-none">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <button class="btn btn-outline" type="button" id="btnPaypalCreate">Create PayPal Order</button>
+                </div>
+                <div class="row g-2">
+                  <div class="col-12 col-md-8">
+                    <input class="form-control form-control-sm" id="paypalOrderId" placeholder="PayPal Order ID" />
+                  </div>
+                  <div class="col-12 col-md-4 d-grid">
+                    <button class="btn btn-primary btn-sm" type="button" id="btnPaypalCapture">Confirm PayPal Capture</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="actionStripe" class="payment-action d-none">
+                <button class="btn btn-outline" type="button" id="btnStripe">Go to Stripe Checkout</button>
+              </div>
+
+              <div id="actionNets" class="payment-action d-none">
+                <form method="POST" action="/payments/nets/request" class="d-inline">
+                  <button class="btn btn-outline" type="submit">Generate NETS QR</button>
+                </form>
+              </div>
+
+              <% if (activePayment) { %>
+                <p class="text-success small mt-3 mb-0">
+                  Payment verified in session: <strong><%= activePayment.method %></strong>
+                </p>
+              <% } %>
+            </div>
+
+            <form class="row g-2" method="POST" action="/checkout">
+              <div class="col-12 col-md-4">
+                <label class="form-label small" for="payment_method">Payment method</label>
+                <select class="form-select" id="payment_method" name="payment_method">
+                  <option value="wallet">Wallet</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="stripe">Stripe Card</option>
+                  <option value="nets">NETS QR</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small">&nbsp;</label>
+                <div class="form-control text-muted">Total: $<%= Number(total || 0).toFixed(2) %></div>
+              </div>
+              <div class="col-12 col-md-4 d-grid">
+                <label class="form-label small">&nbsp;</label>
+                <button class="btn btn-gradient" type="submit">Place order</button>
+              </div>
+            </form>
+          <% } %>
+        </div>
+      </div>
+    </main>
+    <script>
+      async function postJson(url, body) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body || {}),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Request failed.");
+        return data;
+      }
+
+      const btnPaypalCreate = document.getElementById("btnPaypalCreate");
+      const btnPaypalCapture = document.getElementById("btnPaypalCapture");
+      const btnStripe = document.getElementById("btnStripe");
+      const paypalOrderId = document.getElementById("paypalOrderId");
+      const methodSelect = document.getElementById("payment_method");
+      const methodButtons = document.querySelectorAll("[data-method]");
+      const actionSections = {
+        wallet: document.getElementById("actionWallet"),
+        paypal: document.getElementById("actionPaypal"),
+        stripe: document.getElementById("actionStripe"),
+        nets: document.getElementById("actionNets"),
+      };
+
+      function showAction(method) {
+        Object.keys(actionSections).forEach((key) => {
+          const el = actionSections[key];
+          if (!el) return;
+          if (key === method) el.classList.remove("d-none");
+          else el.classList.add("d-none");
+        });
+        if (methodSelect) methodSelect.value = method;
+        methodButtons.forEach((btn) => {
+          const active = btn.getAttribute("data-method") === method;
+          btn.classList.toggle("btn-primary", active);
+          btn.classList.toggle("btn-outline", !active);
+        });
+      }
+
+      methodButtons.forEach((btn) => {
+        btn.addEventListener("click", () => showAction(btn.getAttribute("data-method")));
+      });
+      if (methodSelect) {
+        methodSelect.addEventListener("change", (e) => showAction(e.target.value));
+        showAction(methodSelect.value || "wallet");
+      }
+
+      if (btnPaypalCreate) {
+        btnPaypalCreate.addEventListener("click", async () => {
+          try {
+            const order = await postJson("/api/paypal/create-order");
+            if (paypalOrderId) paypalOrderId.value = order.id || "";
+            alert(`PayPal order created: ${order.id || "N/A"}`);
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      }
+
+      if (btnPaypalCapture) {
+        btnPaypalCapture.addEventListener("click", async () => {
+          try {
+            const orderId = (paypalOrderId && paypalOrderId.value || "").trim();
+            if (!orderId) {
+              alert("Enter a PayPal order ID first.");
+              return;
+            }
+            await postJson("/api/paypal/capture-order", { orderId });
+            window.location.href = "/cart?payment_ready=paypal";
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      }
+
+      if (btnStripe) {
+        btnStripe.addEventListener("click", async () => {
+          try {
+            const data = await postJson("/api/stripe/create-checkout-session");
+            if (data.url) window.location.href = data.url;
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

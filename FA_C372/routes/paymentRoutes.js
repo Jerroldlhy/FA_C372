@@ -7,28 +7,77 @@ const router = express.Router();
 const studentPaymentRouter = express.Router();
 
 studentPaymentRouter.post(
-  "/courses/:id/pay",
+  "/api/paypal/create-order",
   authenticateToken,
   requireStudent,
-  paymentController.payForCourse
+  paymentController.createPaypalOrder
 );
 
 studentPaymentRouter.post(
-  "/payment",
+  "/api/paypal/capture-order",
   authenticateToken,
   requireStudent,
-  paymentController.makePayment
+  paymentController.capturePaypalOrder
+);
+
+studentPaymentRouter.post(
+  "/api/stripe/create-checkout-session",
+  authenticateToken,
+  requireStudent,
+  paymentController.createStripeSession
 );
 
 studentPaymentRouter.get(
-  "/transactions/me",
+  "/payments/stripe/success",
   authenticateToken,
   requireStudent,
-  paymentController.listMyTransactions
+  paymentController.stripeSuccess
 );
 
 studentPaymentRouter.get(
-  "/transactions",
+  "/payments/stripe/cancel",
+  authenticateToken,
+  requireStudent,
+  paymentController.stripeCancel
+);
+
+studentPaymentRouter.post(
+  "/payments/nets/request",
+  authenticateToken,
+  requireStudent,
+  paymentController.requestNets
+);
+
+studentPaymentRouter.get(
+  "/payments/nets/status/:txnRetrievalRef",
+  authenticateToken,
+  requireStudent,
+  paymentController.netsStatus
+);
+
+studentPaymentRouter.get(
+  "/payments/nets/success",
+  authenticateToken,
+  requireStudent,
+  paymentController.netsSuccess
+);
+
+studentPaymentRouter.get(
+  "/payments/nets/fail",
+  authenticateToken,
+  requireStudent,
+  paymentController.netsFail
+);
+
+studentPaymentRouter.post(
+  "/api/payments/mark-failed",
+  authenticateToken,
+  requireStudent,
+  paymentController.markPaymentFailed
+);
+
+studentPaymentRouter.get(
+  "/api/transactions/me",
   authenticateToken,
   requireStudent,
   paymentController.listMyTransactions

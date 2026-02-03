@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | NETS QR</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="course-page">
+    <main class="section">
+      <div class="container">
+        <div class="dashboard-panel text-center">
+          <h1>Scan NETS QR to Pay</h1>
+          <p>Total: $<%= Number(total || 0).toFixed(2) %></p>
+          <img src="<%= qrCodeDataUri %>" alt="NETS QR code" style="max-width: 320px; margin: 0 auto;" />
+          <p class="small text-muted mt-3">After payment confirmation, continue below.</p>
+          <div class="d-flex justify-content-center gap-2 mt-3">
+            <a class="btn btn-primary" href="/payments/nets/success?txn_retrieval_ref=<%= encodeURIComponent(txnRetrievalRef) %>">I paid successfully</a>
+            <a class="btn btn-outline" href="/payments/nets/fail?txn_retrieval_ref=<%= encodeURIComponent(txnRetrievalRef) %>&message=Cancelled">Cancel</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

@@ -20,7 +20,10 @@
       ];
       if (safeRole === "student") {
         navItems.push({ label: "Wallet", href: "/wallet" });
+        navItems.push({ label: "Cart", href: "/cart" });
+        navItems.push({ label: "Orders", href: "/orders" });
       }
+      const navSearchQ = typeof filters !== "undefined" && filters ? filters.q || "" : "";
     %>
     <div class="header-middle">
       <nav class="nav-links">
@@ -28,10 +31,10 @@
           <a href="<%= item.href %>"><%= item.label %></a>
         <% }); %>
       </nav>
-      <div class="search-pill">
+      <form class="search-pill" method="GET" action="/courses">
         <span class="search-icon"></span>
-        <input type="search" placeholder="Search courses" />
-      </div>
+        <input type="search" name="q" value="<%= navSearchQ %>" placeholder="Search courses" />
+      </form>
     </div>
     <div class="header-actions">
       <% if (currentUser) { %>

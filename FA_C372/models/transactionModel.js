@@ -1,48 +1,33 @@
 const pool = require("./db");
 
-const listByUserId = async (userId) => {
+const createTransaction = async (userId, type, amount, status) => {
+  await pool.query(
+    "INSERT INTO transactions (user_id, type, amount, status) VALUES (?, ?, ?, ?)",
+    [userId, type, amount, status]
+  );
+};
+
+const getTransactionsForUser = async (userId, limit = null) => {
   const [rows] = await pool.query(
-    `SELECT transaction_id, transaction_type, amount, transaction_status, created_at
+    `SELECT id, type, amount, status, created_at
      FROM transactions
      WHERE user_id = ?
-     ORDER BY created_at DESC`,
-    [userId]
+     ORDER BY created_at DESC
+     ${limit ? "LIMIT ?" : ""}`,
+    limit ? [userId, limit] : [userId]
   );
   return rows;
 };
 
-const createTransaction = async ({
-  user_id,
-  transaction_type,
-  amount,
-  transaction_status,
-}) => {
-  const [result] = await pool.query(
-    "INSERT INTO transactions (user_id, transaction_type, amount, transaction_status) VALUES (?, ?, ?, ?)",
-    [user_id, transaction_type, amount, transaction_status]
-  );
-  return result.insertId;
-};
-
-const countTransactions = async () => {
-  const [[row]] = await pool.query(
-    "SELECT COUNT(*) AS total_transactions FROM transactions"
-  );
-  return row.total_transactions || 0;
-};
-
-const listAll = async () => {
+const getAllTransactions = async () => {
   const [rows] = await pool.query(
-    `SELECT transaction_id, user_id, transaction_type, amount, transaction_status, created_at
-     FROM transactions
-     ORDER BY created_at DESC`
+    "SELECT id, user_id, type, amount, status, created_at FROM transactions ORDER BY created_at DESC"
   );
   return rows;
 };
 
 module.exports = {
-  listByUserId,
   createTransaction,
-  countTransactions,
-  listAll,
+  getTransactionsForUser,
+  getAllTransactions,
 };

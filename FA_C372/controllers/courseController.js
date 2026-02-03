@@ -1,12 +1,68 @@
-const courseModel = require("../models/courseModel");
-const courseService = require("../services/courseService");
-const courseProgressModel = require("../models/courseProgressModel");
-const reviewModel = require("../models/reviewModel");
+const {
+  getCoursesWithStats,
+  getCourseFilterOptions,
+  getCourseById,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+} = require("../models/courseModel");
+const { getLecturers, isLecturerId } = require("../models/userModel");
+const { getReviewsForCourses, upsertReview } = require("../models/reviewModel");
+const { getEnrollmentsByStudent, isStudentEnrolled } = require("../models/enrollmentModel");
+const { getWalletBalance } = require("../models/walletModel");
+const {
+  enrollStudentWithPayment,
+  WalletError,
+  ExternalCheckoutRequiredError,
+} = require("../models/paymentModel");
+const { getCartItemsForUser } = require("../models/cartModel");
 
-const renderHome = async (req, res, next) => {
+const listCourses = async (req, res, next) => {
   try {
-    const courses = await courseModel.listCourses({ limit: 100, offset: 0 });
-    res.render("index", { courses });
+    const filters = {
+      q: (req.query.q || "").trim(),
+      category: (req.query.category || "").trim(),
+      level: (req.query.level || "").trim(),
+      language: (req.query.language || "").trim(),
+      minPrice: req.query.min_price || "",
+      maxPrice: req.query.max_price || "",
+    };
+
+    const courses = await getCoursesWithStats(filters);
+    const filterOptions = await getCourseFilterOptions();
+    const courseIds = courses.map((c) => c.id);
+    const reviewsMap = {};
+    if (courseIds.length) {
+      const reviewRows = await getReviewsForCourses(courseIds);
+      reviewRows.forEach((review) => {
+        if (!reviewsMap[review.course_id]) {
+          reviewsMap[review.course_id] = [];
+        }
+        reviewsMap[review.course_id].push(review);
+      });
+    }
+    const lecturers = await getLecturers();
+    let enrolledCourseIds = [];
+    let walletBalance = 0;
+    let cartCourseIds = [];
+    if (req.user && req.user.role === "student") {
+      const enrollments = await getEnrollmentsByStudent(req.user.id);
+      enrolledCourseIds = enrollments.map((row) => row.course_id);
+      walletBalance = await getWalletBalance(req.user.id);
+      const cartItems = await getCartItemsForUser(req.user.id);
+      cartCourseIds = cartItems.map((row) => Number(row.course_id));
+    }
+    res.render("courses", {
+      courses,
+      reviewsMap,
+      enrolledCourseIds,
+      cartCourseIds,
+      walletBalance,
+      lecturers,
+      filters,
+      filterOptions,
+      status: req.query,
+    });
   } catch (err) {
     next(err);
   }
@@ -14,397 +70,138 @@ const renderHome = async (req, res, next) => {
 
 const getCourseDetails = async (req, res, next) => {
   try {
-    const course = await courseModel.findCourseById(req.params.id);
-    if (!course) {
-      if (req.accepts("html")) {
-        return res.status(404).render("404");
-      }
-      return res.status(404).json({ error: "Course not found." });
+    const course = await getCourseById(req.params.id);
+    if (!course) return res.status(404).render("404");
+
+    let enrolled = false;
+    let inCart = false;
+    const isStudent = req.user && String(req.user.role).toLowerCase() === "student";
+    if (isStudent) {
+      enrolled = await isStudentEnrolled(course.id, req.user.id);
+      const cartItems = await getCartItemsForUser(req.user.id);
+      inCart = cartItems.some((item) => Number(item.course_id) === Number(course.id));
     }
-    if (req.accepts("html")) {
-      return res.render("courseDetails", { course, status: req.query });
-    }
-    return res.status(200).json({ course: courseService.toCourseResponse(course) });
-  } catch (err) {
-    next(err);
-  }
-};
 
-const listCourses = async (req, res, next) => {
-  try {
-    const { page, limit, offset } = courseService.parsePagination(req.query);
-
-    const total = await courseModel.countCourses();
-    const rows = await courseModel.listCourses({ limit, offset });
-
-    const data = rows.map(courseService.toCourseResponse);
-
-    return res.status(200).json({
-      data,
-      pagination: {
-        page,
-        limit,
-        total,
-        total_pages: Math.ceil(total / limit),
-      },
+    res.render("courseDetails", {
+      course,
+      status: req.query,
+      isStudent,
+      enrolled,
+      inCart,
     });
   } catch (err) {
     next(err);
   }
 };
 
-const createCourse = async (req, res, next) => {
+const handleCreateCourse = async (req, res, next) => {
   try {
-    const {
+    const { course_name, price, category, description, level, language, stock_qty, instructor_id } = req.body;
+    if (!course_name || !price) return res.redirect("/courses?course_error=missing");
+    const role = (req.user.role || "").toLowerCase();
+    let assignedInstructor = null;
+    if (role === "lecturer") assignedInstructor = req.user.id;
+    else if (instructor_id && (await isLecturerId(instructor_id))) assignedInstructor = instructor_id;
+    await createCourse({
       course_name,
       description,
       price,
       category,
-      category_id,
-      skill_level,
+      level,
       language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id,
-    } = req.body;
-    if (!course_name || !price) {
-      return res.status(400).json({ error: "course_name and price are required." });
-    }
-
-    const role = String(req.user.role || "").toLowerCase();
-    const instructorId =
-      role === "admin" && instructor_id ? Number(instructor_id) : Number(req.user.id);
-
-    const courseId = await courseModel.createCourse({
-      course_name,
-      description,
-      price,
-      category,
-      category_id,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id: instructorId,
+      stock_qty,
+      instructor_id: assignedInstructor,
     });
-
-    return res.status(201).json({
-      message: "Course created successfully.",
-      course_id: courseId,
-    });
+    res.redirect("/courses?course_created=1");
   } catch (err) {
     next(err);
   }
 };
 
-const updateCourse = async (req, res, next) => {
+const handleUpdateCourse = async (req, res, next) => {
+  try {
+    const { course_name, price, category, description, level, language, stock_qty } = req.body;
+    const course = await getCourseById(req.params.id);
+    if (!course) return res.redirect("/courses?course_error=not_found");
+    const role = (req.user.role || "").toLowerCase();
+    if (role === "lecturer" && course.instructor_id !== req.user.id) return res.status(403).send("Forbidden");
+    let assignedInstructor = course.instructor_id;
+    if (role === "admin" && req.body.instructor_id && (await isLecturerId(req.body.instructor_id))) {
+      assignedInstructor = req.body.instructor_id;
+    }
+    await updateCourse(req.params.id, {
+      course_name: course_name || course.course_name,
+      price: price || course.price,
+      category,
+      description,
+      level,
+      language,
+      stock_qty,
+      instructor_id: assignedInstructor,
+    });
+    res.redirect("/courses?course_updated=1");
+  } catch (err) {
+    next(err);
+  }
+};
+
+const handleDeleteCourse = async (req, res, next) => {
+  try {
+    const course = await getCourseById(req.params.id);
+    if (!course) return res.redirect("/courses?course_error=not_found");
+    const role = (req.user.role || "").toLowerCase();
+    if (role === "lecturer" && course.instructor_id !== req.user.id) return res.status(403).send("Forbidden");
+    await deleteCourse(req.params.id);
+    res.redirect("/courses?course_deleted=1");
+  } catch (err) {
+    next(err);
+  }
+};
+
+const handleReview = async (req, res, next) => {
   try {
     const courseId = req.params.id;
-    const role = String(req.user.role || "").toLowerCase();
-    if (role === "lecturer") {
-      const ownsCourse = await courseModel.isCourseOwnedByInstructor(
-        courseId,
-        req.user.id
-      );
-      if (!ownsCourse) {
-        return res.status(403).json({ error: "You can only update your own courses." });
-      }
-    }
-
-    const {
-      course_name,
-      category,
-      category_id,
-      price,
-      description,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id,
-    } = req.body;
-    await courseModel.updateCourse({
-      course_id: courseId,
-      course_name,
-      category,
-      category_id,
-      price,
-      description,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id: role === "admin" ? instructor_id : req.user.id,
-    });
-
-    return res.status(200).json({ message: "Course updated.", course_id: Number(courseId) });
+    const enrolled = await isStudentEnrolled(courseId, req.user.id);
+    if (!enrolled) return res.redirect("/courses?review_error=not_enrolled");
+    let rating = Number(req.body.rating || 0);
+    if (!rating || rating < 1) rating = 1;
+    if (rating > 5) rating = 5;
+    await upsertReview(courseId, req.user.id, rating, req.body.review || null);
+    res.redirect("/courses?review_success=1");
   } catch (err) {
     next(err);
   }
 };
 
-const deleteCourse = async (req, res, next) => {
+const handleEnroll = async (req, res, next) => {
+  const courseId = req.params.id;
+  const paymentMethod = (req.body.payment_method || "wallet").toLowerCase();
   try {
-    const courseId = req.params.id;
-    const role = String(req.user.role || "").toLowerCase();
-    if (role === "lecturer") {
-      const ownsCourse = await courseModel.isCourseOwnedByInstructor(
-        courseId,
-        req.user.id
-      );
-      if (!ownsCourse) {
-        return res.status(403).json({ error: "You can only delete your own courses." });
-      }
-    }
-
-    await courseModel.deleteCourse(courseId);
-    return res.status(200).json({ message: "Course deleted.", course_id: Number(courseId) });
+    const course = await getCourseById(courseId);
+    if (!course) return res.redirect("/courses?enroll_error=course_missing");
+    const price = Number(course.price);
+    if (price < 0) return res.redirect("/courses?enroll_error=invalid_price");
+    const enrolled = await isStudentEnrolled(courseId, req.user.id);
+    if (enrolled) return res.redirect("/courses?enroll_error=already_enrolled");
+    await enrollStudentWithPayment(courseId, req.user.id, price, paymentMethod);
+    return res.redirect("/courses?enrolled=1");
   } catch (err) {
-    next(err);
-  }
-};
-
-const listCourseStudents = async (req, res, next) => {
-  try {
-    const courseId = req.params.id;
-    const course = await courseModel.findCourseById(courseId);
-    if (!course) {
-      return res.status(404).json({ error: "Course not found." });
+    if (err instanceof WalletError) {
+      return res.redirect("/courses?enroll_error=wallet_balance");
     }
-
-    const role = String(req.user.role || "").toLowerCase();
-    if (role === "lecturer" && Number(course.instructor_id) !== Number(req.user.id)) {
-      return res.status(403).json({ error: "You can only view your own course students." });
+    if (err instanceof ExternalCheckoutRequiredError) {
+      return res.redirect("/courses?enroll_error=external_checkout");
     }
-
-    const enrollments = await courseModel.listEnrollmentsByCourseId(courseId);
-    return res.status(200).json({
-      course_id: Number(courseId),
-      students: enrollments,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const enrollCourse = async (req, res, next) => {
-  try {
-    const courseId = req.params.id;
-    const userId = req.user.id;
-
-    const course = await courseModel.findCourseById(courseId);
-    if (!course) {
-      return res.status(404).json({ error: "Course not found." });
-    }
-
-    const existingEnrollment = await courseModel.findEnrollment({ courseId, userId });
-    if (existingEnrollment) {
-      return res.status(409).json({ error: "Student is already enrolled in this course." });
-    }
-
-    await courseModel.createEnrollment({ courseId, userId });
-
-    return res.status(201).json({
-      message: "Enrollment successful.",
-      course_id: Number(courseId),
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const updateMyCourseProgress = async (req, res, next) => {
-  try {
-    const courseId = Number(req.params.id);
-    const userId = Number(req.user.id);
-    const progressPercent = Number(req.body.progress_percent);
-    if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) {
-      return res.status(400).json({ error: "progress_percent must be between 0 and 100." });
-    }
-
-    const enrollment = await courseModel.findEnrollment({ courseId, userId });
-    if (!enrollment) {
-      return res.status(403).json({ error: "Enroll in the course before updating progress." });
-    }
-
-    const status = progressPercent >= 100 ? "completed" : "in_progress";
-    await courseProgressModel.upsertProgress({
-      user_id: userId,
-      course_id: courseId,
-      progress_percent: progressPercent,
-      status,
-    });
-
-    return res.status(200).json({
-      message: "Progress updated.",
-      course_id: courseId,
-      progress_percent: progressPercent,
-      status,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getMyCourseProgress = async (req, res, next) => {
-  try {
-    const courseId = Number(req.params.id);
-    const userId = Number(req.user.id);
-    const progress = await courseProgressModel.getProgress({
-      user_id: userId,
-      course_id: courseId,
-    });
-    return res.status(200).json({ progress: progress || null });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const addCourseReview = async (req, res, next) => {
-  try {
-    const courseId = Number(req.params.id);
-    const userId = Number(req.user.id);
-    const rating = Number(req.body.rating);
-    const feedback = req.body.feedback || null;
-
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res.status(400).json({ error: "rating must be an integer from 1 to 5." });
-    }
-
-    const enrollment = await courseModel.findEnrollment({ courseId, userId });
-    if (!enrollment) {
-      return res.status(403).json({ error: "Enroll in the course before reviewing." });
-    }
-
-    const review_id = await reviewModel.createReview({
-      user_id: userId,
-      course_id: courseId,
-      rating,
-      feedback,
-    });
-    return res.status(201).json({ message: "Review submitted.", review_id });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const listCourseReviews = async (req, res, next) => {
-  try {
-    const courseId = Number(req.params.id);
-    const reviews = await reviewModel.listReviewsByCourse(courseId);
-    return res.status(200).json({ reviews });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminCreateCourse = async (req, res, next) => {
-  try {
-    const {
-      course_name,
-      category,
-      category_id,
-      price,
-      description,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id,
-    } = req.body;
-    if (!course_name || !price) {
-      return res.redirect("/dashboard/admin?course_error=1");
-    }
-    await courseModel.createCourse({
-      course_name,
-      description,
-      price,
-      category,
-      category_id,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id: instructor_id || null,
-    });
-    res.redirect("/dashboard/admin?course_created=1");
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminUpdateCourse = async (req, res, next) => {
-  try {
-    const {
-      course_name,
-      category,
-      category_id,
-      price,
-      description,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id,
-    } = req.body;
-    await courseModel.updateCourse({
-      course_id: req.params.id,
-      course_name,
-      category,
-      category_id,
-      price,
-      description,
-      skill_level,
-      language,
-      learning_outcomes,
-      resources,
-      is_active,
-      seats_available,
-      instructor_id,
-    });
-    res.redirect("/dashboard/admin?course_updated=1");
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminDeleteCourse = async (req, res, next) => {
-  try {
-    await courseModel.deleteCourse(req.params.id);
-    res.redirect("/dashboard/admin?course_deleted=1");
-  } catch (err) {
     next(err);
   }
 };
 
 module.exports = {
-  renderHome,
-  getCourseDetails,
   listCourses,
-  createCourse,
-  updateCourse,
-  deleteCourse,
-  listCourseStudents,
-  enrollCourse,
-  updateMyCourseProgress,
-  getMyCourseProgress,
-  addCourseReview,
-  listCourseReviews,
-  adminCreateCourse,
-  adminUpdateCourse,
-  adminDeleteCourse,
+  getCourseDetails,
+  handleCreateCourse,
+  handleUpdateCourse,
+  handleDeleteCourse,
+  handleReview,
+  handleEnroll,
 };
