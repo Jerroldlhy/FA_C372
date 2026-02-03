@@ -21,10 +21,60 @@
           <span>EduSphere</span>
         </div>
         <h1>Welcome Back</h1>
-        <p class="auth-subtitle">Sign in to access your dashboard.</p>
+        <p class="auth-subtitle">Sign in to access your personalized dashboard.</p>
 
         <% if (error) { %>
-          <div class="auth-alert"><%= error %></div>
+          <div class="auth-alert auth-alert-danger"><%= error %></div>
+        <% } %>
+        <% if (info?.sent_verify) { %>
+          <div class="auth-alert auth-alert-info">
+            Verification email sent. Please check your inbox.
+          </div>
+        <% } %>
+        <% if (info?.verified) { %>
+          <div class="auth-alert auth-alert-success">
+            Email verified! You can now log in.
+          </div>
+        <% } %>
+        <% if (info?.verify_error === "missing") { %>
+          <div class="auth-alert auth-alert-warning">
+            Verification token missing from the link.
+          </div>
+        <% } %>
+        <% if (info?.verify_error === "invalid") { %>
+          <div class="auth-alert auth-alert-danger">
+            Invalid verification token.
+          </div>
+        <% } %>
+        <% if (info?.pending_verification) { %>
+          <div class="auth-alert auth-alert-warning">
+            Please verify your email before logging in.
+          </div>
+        <% } %>
+        <% if (info?.resent) { %>
+          <div class="auth-alert auth-alert-info">
+            Verification email resent—check your inbox.
+          </div>
+        <% } %>
+        <% if (info?.resend_error === "missing") { %>
+          <div class="auth-alert auth-alert-danger">
+            Enter an email address to resend the link.
+          </div>
+        <% } %>
+        <% if (info?.resend_error === "not_found") { %>
+          <div class="auth-alert auth-alert-danger">
+            We couldn't find that email.
+          </div>
+        <% } %>
+        <% if (info?.resend === "already_verified") { %>
+          <div class="auth-alert auth-alert-success">
+            Email already verified—just log in.
+          </div>
+        <% } %>
+        <% if (info?.social_unavailable) { %>
+          <div class="auth-alert auth-alert-info">
+            Social login is not wired up yet. Use your email/password instead.
+          </div>
         <% } %>
 
         <form method="POST" action="/login" class="auth-form" novalidate>
@@ -57,12 +107,28 @@
         <div class="auth-divider">
           <span>Or sign in with</span>
         </div>
-        <button class="btn btn-outline auth-social">
+        <a class="btn btn-outline auth-social" href="/auth/google">
           <span class="google-icon">G</span> Google
-        </button>
+        </a>
+
+        <p class="text-muted small text-center mt-3">
+          Didn’t see the verification email?
+        </p>
+        <form method="POST" action="/resend-verification" class="resend-form">
+          <input
+            type="email"
+            name="email"
+            placeholder="Email for verification"
+            required
+            class="form-control form-control-sm"
+          />
+          <button type="submit" class="btn btn-outline w-100">
+            Resend verification email
+          </button>
+        </form>
 
         <p class="auth-footer">
-          Don&apos;t have an account? <a href="/signup">Sign up</a>
+          Don’t have an account? <a href="/signup">Sign up</a>
         </p>
       </section>
     </main>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Student Dashboard</title>
+    <title>EduSphere | Student Dashboard</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -12,144 +12,185 @@
     />
     <link rel="stylesheet" href="/styles/style.css" />
   </head>
-  <body>
-    <main class="container py-5">
-      <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-        <div>
-          <h1 class="display-6 fw-semibold mb-1">Student Dashboard</h1>
-          <p class="text-muted mb-0">Track your courses and wallet activity.</p>
-        </div>
-        <form method="POST" action="/logout">
-          <button class="btn btn-outline-secondary" type="submit">Log out</button>
-        </form>
-      </div>
+  <body class="student-dashboard">
+    <%- include("partials/navbar") %>
+    <main class="section student-section">
+      <div class="container">
+        <section class="student-hero mb-4">
+          <div>
+            <p class="eyebrow text-uppercase text-muted mb-1">Student Workspace</p>
+            <h1 class="display-5 fw-bold mb-2">Learning control center</h1>
+            <p class="lead text-muted mb-0">
+              Courses, progress, payments, and wallet management — everything you
+              need before diving into a new module.
+            </p>
+          </div>
+          <div class="student-hero-card">
+            <p class="text-muted small mb-1">Wallet balance</p>
+            <strong class="display-6">$<%= Number(walletBalance || 0).toFixed(2) %></strong>
+            <p class="text-muted small mb-0">Pay with wallet or external methods.</p>
+          </div>
+        </section>
 
-      <% if (status && status.topup_success) { %>
-        <div class="alert alert-success">Wallet top-up successful.</div>
-      <% } %>
-      <% if (status && status.topup_error) { %>
-        <div class="alert alert-danger">Enter a valid top-up amount.</div>
-      <% } %>
+        <nav class="student-subnav mb-4" aria-label="Student quick links">
+          <a href="#student-courses">Courses</a>
+          <a href="#student-progress">Progress</a>
+          <a href="#student-payments">Payments</a>
+        </nav>
 
-      <div class="row g-4">
-        <div class="col-12 col-xl-8">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h5 class="card-title mb-3">My Enrolled Courses</h5>
-              <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                  <thead>
-                    <tr>
-                      <th>Course</th>
-                      <th>Category</th>
-                      <th>Progress</th>
-                      <th>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% if (!enrollments || enrollments.length === 0) { %>
-                      <tr>
-                        <td colspan="4" class="text-muted">
-                          You are not enrolled in any courses yet.
-                        </td>
-                      </tr>
-                    <% } else { %>
-                      <% enrollments.forEach(function(item) { %>
-                        <tr>
-                          <td><%= item.course_name %></td>
-                          <td><%= item.category %></td>
-                          <td style="min-width: 140px;">
-                            <% const progress = Number(item.progress || 0); %>
-                            <div class="progress" style="height: 8px;">
-                              <div
-                                class="progress-bar"
-                                role="progressbar"
-                                style="width: <%= progress %>%"
-                                aria-valuenow="<%= progress %>"
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                              ></div>
-                            </div>
-                            <small class="text-muted"><%= progress %>%</small>
-                          </td>
-                          <td>
-                            <a
-                              class="btn btn-sm btn-outline-primary"
-                              href="/courses/<%= item.course_id %>"
-                            >
-                              View
-                            </a>
-                          </td>
-                        </tr>
-                      <% }); %>
-                    <% } %>
-                  </tbody>
-                </table>
+        <% if (status?.topup_success) { %>
+          <div class="alert alert-success">Wallet top-up successful.</div>
+        <% } %>
+        <% if (status?.topup_error) { %>
+          <div class="alert alert-danger">Enter a valid top-up amount.</div>
+        <% } %>
+
+        <section class="row g-4" id="student-payments">
+          <div class="col-12 col-lg-4">
+            <div class="wallet-card card">
+              <div class="card-body">
+                <h5 class="card-title">Top-up wallet</h5>
+                <p class="text-muted small">
+                  Use PayPal, bank transfer, or local card to load funds instantly.
+                </p>
+                <form method="POST" action="/wallet/topup" class="topup-form">
+                  <div class="mb-3">
+                    <label class="form-label small" for="amount">Amount</label>
+                    <input
+                      class="form-control form-control-sm"
+                      id="amount"
+                      name="amount"
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="method">Payment method</label>
+                    <select class="form-select form-select-sm" id="method" name="payment_method">
+                      <option value="wallet">Wallet</option>
+                      <option value="paypal">PayPal</option>
+                      <option value="bank_transfer">Bank transfer</option>
+                      <option value="card">Debit/Credit card</option>
+                    </select>
+                  </div>
+                  <button class="btn btn-gradient w-100 btn-sm" type="submit">
+                    Top up now
+                  </button>
+                </form>
+              </div>
+            </div>
+            <div class="wallet-card card mt-4">
+              <div class="card-body">
+                <h5 class="card-title">Payment options</h5>
+                <ul class="list-unstyled text-muted small mb-0">
+                  <li>• Digital wallet (instant checkout).</li>
+                  <li>• PayPal/invoice for external payments.</li>
+                  <li>• Bank transfer (up to 24 hrs to settle).</li>
+                </ul>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="col-12 col-xl-4">
-          <div class="card shadow-sm mb-4">
-            <div class="card-body">
-              <h5 class="card-title mb-2">Wallet Balance</h5>
-              <div class="display-6 fw-semibold mb-3">
-                $<%= Number(walletBalance || 0).toFixed(2) %>
-              </div>
-              <form method="POST" action="/wallet/topup">
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input
-                    class="form-control"
-                    name="amount"
-                    type="number"
-                    step="0.01"
-                    min="1"
-                    placeholder="Top-up amount"
-                    required
-                  />
-                  <button class="btn btn-success" type="submit">Top Up</button>
+          <div class="col-12 col-lg-8" id="student-courses">
+            <div class="enrollment-card card">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <h5 class="card-title mb-0">Your courses</h5>
+                  <span class="text-muted small"><%= enrollments.length %> active enrollments</span>
                 </div>
-              </form>
+                <% if (!enrollments || enrollments.length === 0) { %>
+                  <p class="text-muted small mb-0">You have no course enrollments yet.</p>
+                <% } else { %>
+                  <div class="table-responsive">
+                    <table class="table table-borderless mb-0 align-middle enrollment-table">
+                      <thead>
+                        <tr>
+                          <th>Course</th>
+                          <th>Progress</th>
+                          <th>Status</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% enrollments.forEach(function(item) { %>
+                          <% const progress = Number(item.progress || 0); %>
+                          <tr>
+                            <td>
+                              <strong><%= item.course_name %></strong>
+                              <p class="text-muted small mb-0"><%= item.category %></p>
+                            </td>
+                            <td>
+                              <div class="progress" style="height: 6px;">
+                                <div
+                                  class="progress-bar"
+                                  role="progressbar"
+                                  style="width: <%= progress %>%"
+                                  aria-valuenow="<%= progress %>"
+                                  aria-valuemin="0"
+                                  aria-valuemax="100"
+                                ></div>
+                              </div>
+                              <small class="text-muted small"><%= progress %>% complete</small>
+                            </td>
+                            <td>
+                              <span class="badge bg-light text-dark small">In progress</span>
+                            </td>
+                            <td class="text-end">
+                              <a class="text-decoration-none text-primary small" href="/courses/<%= item.course_id %>">
+                                Continue
+                              </a>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } %>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div class="card shadow-sm">
+        <section class="transactions-section mt-4" id="student-progress">
+          <div class="card">
             <div class="card-body">
-              <h5 class="card-title mb-3">Payment History</h5>
+              <h5 class="card-title">Recent transactions</h5>
               <div class="table-responsive">
-                <table class="table table-sm align-middle mb-0">
+                <table class="table table-sm table-borderless align-middle mb-0">
                   <thead>
                     <tr>
+                      <th>ID</th>
                       <th>Type</th>
                       <th>Amount</th>
                       <th>Status</th>
+                      <th>Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     <% if (!transactions || transactions.length === 0) { %>
                       <tr>
-                        <td colspan="3" class="text-muted">No transactions.</td>
+                        <td colspan="5" class="text-muted small">No transactions recorded.</td>
                       </tr>
                     <% } else { %>
                       <% transactions.forEach(function(tx) { %>
                         <tr>
-                          <td class="text-capitalize"><%= tx.type %></td>
+                          <td><%= tx.id %></td>
+                          <td class="text-capitalize"><%= tx.type.replace(/_/g, " ") %></td>
                           <td>$<%= Number(tx.amount).toFixed(2) %></td>
                           <td class="text-capitalize"><%= tx.status %></td>
+                          <td><%= tx.created_at ? new Date(tx.created_at).toLocaleString() : "" %></td>
                         </tr>
                       <% }); %>
                     <% } %>
                   </tbody>
                 </table>
               </div>
-              <small class="text-muted d-block mt-2">
-                Latest transactions shown.
-              </small>
+              <p class="text-muted small mt-2">Transactions include wallet top-ups and course payments.</p>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </main>
 

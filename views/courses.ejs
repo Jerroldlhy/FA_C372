@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Courses</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=Space+Grotesk:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body>
+    <%- include("partials/navbar") %>
+    <main class="section course-page">
+      <div class="container">
+        <div class="course-hero mb-4">
+          <div>
+            <p class="eyebrow text-uppercase text-muted mb-2">Course Hub</p>
+            <h1 class="display-5 fw-bold mb-2">Browse and manage every course</h1>
+            <p class="lead text-muted">
+              View the catalog, manage your own lessons, enroll with a digital
+              wallet, and share ratings with the community.
+            </p>
+          </div>
+          <div class="course-hero-card">
+            <p class="text-muted small mb-1">Total listings</p>
+            <strong class="display-6 mb-0"><%= courses.length %></strong>
+            <p class="text-muted small mb-0">
+              Rated lessons: <%= courses.filter((c) => c.review_count > 0).length %>
+            </p>
+          </div>
+        </div>
+
+        <% if (status?.course_created) { %>
+          <div class="alert alert-success">Course published.</div>
+        <% } %>
+        <% if (status?.course_updated) { %>
+          <div class="alert alert-success">Course details updated.</div>
+        <% } %>
+        <% if (status?.course_deleted) { %>
+          <div class="alert alert-success">Course removed from catalog.</div>
+        <% } %>
+        <% if (status?.course_error) { %>
+          <div class="alert alert-danger">Name and price are required.</div>
+        <% } %>
+        <% if (status?.enrolled) { %>
+          <div class="alert alert-success">Enrolled! Check “My Dashboard” for progress.</div>
+        <% } %>
+        <% if (status?.enroll_error === "wallet_balance") { %>
+          <div class="alert alert-danger">Top up your wallet – balance is insufficient.</div>
+        <% } %>
+        <% if (status?.enroll_error === "already_enrolled") { %>
+          <div class="alert alert-info">You are already enrolled in this course.</div>
+        <% } %>
+        <% if (status?.enroll_error === "course_missing") { %>
+          <div class="alert alert-danger">Course not found.</div>
+        <% } %>
+        <% if (status?.review_success) { %>
+          <div class="alert alert-success">Thanks for the review!</div>
+        <% } %>
+        <% if (status?.review_error === "not_enrolled") { %>
+          <div class="alert alert-danger">Enroll first to leave a review.</div>
+        <% } %>
+
+        <div class="row g-4">
+          <div class="col-12 col-lg-8">
+            <div class="course-list">
+              <% courses.forEach(function (course) { %>
+                <% const isOwnCourse = currentUser && course.instructor_id === currentUser.id; %>
+                <% const isLecturer = currentUser && currentUser.role === "lecturer"; %>
+                <% const isAdmin = currentUser && currentUser.role === "admin"; %>
+                <% const isStudent = currentUser && currentUser.role === "student"; %>
+                <% const enrolled = enrolledCourseIds.includes(course.id); %>
+                <% const topReview = reviewsMap[course.id] && reviewsMap[course.id][0]; %>
+                <article class="course-card">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <p class="text-muted small mb-1">
+                        <%= course.category || "General" %>
+                      </p>
+                      <h3 class="mb-1"><%= course.course_name %></h3>
+                      <p class="text-muted small mb-0">
+                        Instructor: <%= course.instructor_name || "TBA" %>
+                      </p>
+                    </div>
+                    <div class="text-end">
+                      <strong>$<%= Number(course.price).toFixed(2) %></strong>
+                      <p class="text-muted small mb-0">
+                        Rating:
+                        <%= Number(course.avg_rating || 0).toFixed(1) %>★
+                        (<%= course.review_count %>)
+                      </p>
+                    </div>
+                  </div>
+                  <p class="text-muted small mb-2">
+                    <%= course.description || "No description provided yet." %>
+                  </p>
+                  <% if (topReview && topReview.review) { %>
+                    <div class="review-snippet mb-3">
+                      <strong><%= topReview.student_name %></strong>
+                      <span class="text-muted small mx-2">·</span>
+                      <span class="text-muted small"><%= topReview.rating %>★</span>
+                      <p class="text-muted small mb-0">
+                        <%= topReview.review %>
+                      </p>
+                    </div>
+                  <% } %>
+
+                  <% if (isStudent) { %>
+                    <form
+                      class="enroll-form d-flex flex-wrap align-items-center gap-2 mb-2"
+                      method="POST"
+                      action="/courses/<%= course.id %>/enroll"
+                    >
+                      <label class="text-muted small mb-0 me-2">Payment</label>
+                      <select
+                        class="form-select form-select-sm"
+                        name="payment_method"
+                        aria-label="Payment method"
+                      >
+                        <option value="wallet">Wallet</option>
+                        <option value="external">External</option>
+                      </select>
+                      <button
+                        class="btn btn-primary btn-sm"
+                        type="submit"
+                        <%= enrolled ? "disabled" : "" %>
+                      >
+                        <%= enrolled ? "Enrolled" : "Enroll" %>
+                      </button>
+                    </form>
+                    <% if (enrolled) { %>
+                      <p class="text-success small mb-3">You can now leave a review below.</p>
+                      <form
+                        class="review-form mb-3"
+                        method="POST"
+                        action="/courses/<%= course.id %>/review"
+                      >
+                        <div class="row g-2">
+                          <div class="col-4">
+                            <label class="form-label small">Rating (1-5)</label>
+                            <input
+                              class="form-control form-control-sm"
+                              type="number"
+                              name="rating"
+                              min="1"
+                              max="5"
+                              value="5"
+                              required
+                            />
+                          </div>
+                          <div class="col-8">
+                            <label class="form-label small">Review</label>
+                            <input
+                              class="form-control form-control-sm"
+                              type="text"
+                              name="review"
+                              placeholder="Share your thoughts"
+                            />
+                          </div>
+                          <div class="col-12 text-end">
+                            <button class="btn btn-outline-primary btn-sm" type="submit">
+                              Submit review
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+                    <% } %>
+                  <% } %>
+
+                  <% if (isLecturer || isAdmin) { %>
+                    <% const canManage = isAdmin || isOwnCourse; %>
+                    <% if (canManage) { %>
+                      <div class="course-actions">
+                        <details class="course-editor">
+                          <summary>Manage course</summary>
+                          <form
+                            class="mt-3"
+                            method="POST"
+                            action="/courses/<%= course.id %>/update"
+                          >
+                            <div class="row g-2">
+                              <div class="col-6">
+                                <input
+                                  class="form-control form-control-sm"
+                                  name="course_name"
+                                  value="<%= course.course_name %>"
+                                  required
+                                />
+                              </div>
+                              <div class="col-6">
+                                <input
+                                  class="form-control form-control-sm"
+                                  name="price"
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value="<%= Number(course.price).toFixed(2) %>"
+                                  required
+                                />
+                              </div>
+                              <div class="col-12">
+                                <textarea
+                                  class="form-control form-control-sm"
+                                  name="description"
+                                  rows="2"
+                                ><%= course.description || "" %></textarea>
+                              </div>
+                              <% if (isAdmin) { %>
+                                <div class="col-12">
+                                  <select
+                                    class="form-select form-select-sm"
+                                    name="instructor_id"
+                                  >
+                                    <option value="">Assign instructor</option>
+                                    <% lecturers.forEach(function (lect) { %>
+                                      <option
+                                        value="<%= lect.id %>"
+                                        <%= course.instructor_id === lect.id ? "selected" : "" %>
+                                      >
+                                        <%= lect.name %>
+                                      </option>
+                                    <% }); %>
+                                  </select>
+                                </div>
+                              <% } %>
+                              <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary" type="submit">
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          </form>
+                          <form
+                            method="POST"
+                            action="/courses/<%= course.id %>/delete"
+                            class="course-delete mt-3 text-end"
+                            onsubmit="return confirm('Delete this course?');"
+                          >
+                            <button class="btn btn-sm btn-outline-danger" type="submit">
+                              Delete
+                            </button>
+                          </form>
+                        </details>
+                      </div>
+                    <% } %>
+                  <% } %>
+                </article>
+              <% }); %>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-4">
+            <% const isLecturer = currentUser && currentUser.role === "lecturer"; %>
+            <% const isAdmin = currentUser && currentUser.role === "admin"; %>
+            <% const isStudent = currentUser && currentUser.role === "student"; %>
+            <% if (isLecturer || isAdmin) { %>
+              <div class="dashboard-panel card mb-4">
+                <div class="panel-header mb-3">
+                  <h5 class="card-title mb-0">Create a course</h5>
+                  <p class="text-muted small mb-0">
+                    <%= isLecturer ? "Your listing adds to the instructor catalog." : "Assign an instructor." %>
+                  </p>
+                </div>
+                <form method="POST" action="/courses">
+                  <div class="mb-3">
+                    <label class="form-label small" for="course_name">Course Name</label>
+                    <input class="form-control form-control-sm" id="course_name" name="course_name" required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="category">Category</label>
+                    <input class="form-control form-control-sm" id="category" name="category" />
+                  </div>
+                  <div class="row g-2 mb-3">
+                    <div class="col-6">
+                      <label class="form-label small" for="price">Price</label>
+                      <input
+                        class="form-control form-control-sm"
+                        id="price"
+                        name="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required
+                      />
+                    </div>
+                    <div class="col-6">
+                      <% if (isAdmin) { %>
+                        <label class="form-label small" for="instructor_id">Instructor</label>
+                        <select
+                          class="form-select form-select-sm"
+                          id="instructor_id"
+                          name="instructor_id"
+                        >
+                          <option value="">Auto</option>
+                          <% lecturers.forEach(function (lect) { %>
+                            <option value="<%= lect.id %>"><%= lect.name %></option>
+                          <% }); %>
+                        </select>
+                      <% } else { %>
+                        <label class="form-label small">&nbsp;</label>
+                        <div class="form-control form-control-sm text-muted bg-light">
+                          <%= currentUser.name %>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="description">Description</label>
+                    <textarea class="form-control form-control-sm" id="description" name="description" rows="3"></textarea>
+                  </div>
+                  <button class="btn btn-gradient w-100" type="submit">Publish course</button>
+                </form>
+              </div>
+            <% } %>
+
+            <% if (isStudent) { %>
+              <div class="dashboard-panel card mb-4">
+                <div class="panel-header mb-1">
+                  <h5 class="card-title mb-0">Wallet balance</h5>
+                </div>
+                <p class="display-6 fw-semibold mb-1">$<%= Number(walletBalance || 0).toFixed(2) %></p>
+                <p class="text-muted small">Use wallet or external payment at checkout.</p>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

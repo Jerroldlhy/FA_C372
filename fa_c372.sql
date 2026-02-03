@@ -17,9 +17,12 @@ CREATE TABLE users (
   email VARCHAR(100) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('student','lecturer','admin') DEFAULT 'student',
+  email_verified TINYINT(1) DEFAULT 0,
+  verification_token VARCHAR(128) DEFAULT NULL,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY email (email)
+  UNIQUE KEY email (email),
+  KEY verification_token (verification_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE courses (
@@ -44,8 +47,8 @@ CREATE TABLE enrollments (
   PRIMARY KEY (id),
   KEY course_id (course_id),
   KEY student_id (student_id),
-  CONSTRAINT enrollments_course_fk FOREIGN KEY (course_id) REFERENCES courses (id),
-  CONSTRAINT enrollments_student_fk FOREIGN KEY (student_id) REFERENCES users (id)
+  CONSTRAINT enrollments_course_fk FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+  CONSTRAINT enrollments_student_fk FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE wallet (
@@ -68,12 +71,25 @@ CREATE TABLE transactions (
   CONSTRAINT transactions_user_fk FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE course_reviews (
+  id INT NOT NULL AUTO_INCREMENT,
+  course_id INT NOT NULL,
+  student_id INT NOT NULL,
+  rating TINYINT NOT NULL,
+  review TEXT,
+  created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY course_student_unique (course_id, student_id),
+  CONSTRAINT course_reviews_course_fk FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+  CONSTRAINT course_reviews_student_fk FOREIGN KEY (student_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE VIEW instructors AS
   SELECT id, name
   FROM users
   WHERE role = 'lecturer';
 
-INSERT INTO users (name, email, password_hash, role)
+INSERT INTO users (name, email, password_hash, role, email_verified)
 VALUES
-  ('Mary Jane', 'maryjane@gmail.com', '$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS', 'student'),
-  ('Admin1', 'admin1@admin.com', '$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS', 'admin');
+  ('Mary Jane', 'maryjane@gmail.com', '$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS', 'student', 1),
+  ('Admin1', 'admin1@admin.com', '$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS', 'admin', 1);

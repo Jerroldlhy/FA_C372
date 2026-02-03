@@ -1,0 +1,62 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>EduSphere</span>
+    </div>
+    <% 
+      const safeRole = currentUser?.role ? String(currentUser.role).toLowerCase() : null;
+      const dashboardPath =
+        safeRole === "admin"
+          ? "/dashboard/admin"
+          : safeRole === "lecturer"
+          ? "/dashboard/lecturer"
+          : "/dashboard/student";
+      const navItems = [
+        { label: "Home", href: "/" },
+        { label: "Courses", href: "/courses" },
+        { label: "Mentors", href: "/mentors" },
+        { label: "Plans", href: "/plans" }
+      ];
+      if (safeRole === "student") {
+        navItems.push({ label: "Wallet", href: "/wallet" });
+      }
+    %>
+    <div class="header-middle">
+      <nav class="nav-links">
+        <% navItems.forEach(function(item) { %>
+          <a href="<%= item.href %>"><%= item.label %></a>
+        <% }); %>
+      </nav>
+      <div class="search-pill">
+        <span class="search-icon"></span>
+        <input type="search" placeholder="Search courses" />
+      </div>
+    </div>
+    <div class="header-actions">
+      <% if (currentUser) { %>
+        <div class="user-pill">
+          <div>
+            <strong><%= currentUser.name || "Member" %></strong>
+            <div class="text-muted small text-uppercase">
+              <%= currentUser.role %>
+            </div>
+          </div>
+          <div class="user-pill-actions">
+            <a class="btn btn-outline-secondary btn-sm" href="<%= dashboardPath %>">
+              Dashboard
+            </a>
+            <form method="POST" action="/logout">
+              <button class="btn btn-link text-muted small" type="submit">
+                Sign Out
+              </button>
+            </form>
+          </div>
+        </div>
+      <% } else { %>
+        <a class="text-link" href="/login">Log In</a>
+        <a class="btn btn-primary" href="/signup">Sign Up</a>
+      <% } %>
+    </div>
+  </div>
+</header>
