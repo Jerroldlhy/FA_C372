@@ -1,5 +1,8 @@
+const path = require('path');
 const mysql = require('mysql2');
-require('dotenv').config(); // Load variables from .env
+const dotenv = require('dotenv');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') }); // fallback when running from project root
 
 //Database connection details
 const db = mysql.createConnection({

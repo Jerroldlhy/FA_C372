@@ -4,6 +4,7 @@
 -- ------------------------------------------------------
 -- Server version	8.0.21
 
+UNLOCK TABLES;
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -39,11 +40,7 @@ CREATE TABLE `cart_items` (
 -- Dumping data for table `cart_items`
 --
 
-LOCK TABLES `cart_items` WRITE;
-/*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
 INSERT INTO `cart_items` VALUES (1,1,1,1);
-/*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `carts`
@@ -66,11 +63,7 @@ CREATE TABLE `carts` (
 -- Dumping data for table `carts`
 --
 
-LOCK TABLES `carts` WRITE;
-/*!40000 ALTER TABLE `carts` DISABLE KEYS */;
 INSERT INTO `carts` VALUES (1,1,'2026-02-03 17:00:15');
-/*!40000 ALTER TABLE `carts` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `categories`
@@ -91,10 +84,6 @@ CREATE TABLE `categories` (
 -- Dumping data for table `categories`
 --
 
-LOCK TABLES `categories` WRITE;
-/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
-/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `course_reviews`
@@ -122,10 +111,6 @@ CREATE TABLE `course_reviews` (
 -- Dumping data for table `course_reviews`
 --
 
-LOCK TABLES `course_reviews` WRITE;
-/*!40000 ALTER TABLE `course_reviews` DISABLE KEYS */;
-/*!40000 ALTER TABLE `course_reviews` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `courses`
@@ -159,11 +144,7 @@ CREATE TABLE `courses` (
 -- Dumping data for table `courses`
 --
 
-LOCK TABLES `courses` WRITE;
-/*!40000 ALTER TABLE `courses` DISABLE KEYS */;
 INSERT INTO `courses` VALUES (1,'Fintech','fintech',150.00,'SOI',NULL,'2026-02-03 14:32:25',NULL,NULL,0,1,NULL);
-/*!40000 ALTER TABLE `courses` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `enrollments`
@@ -190,10 +171,6 @@ CREATE TABLE `enrollments` (
 -- Dumping data for table `enrollments`
 --
 
-LOCK TABLES `enrollments` WRITE;
-/*!40000 ALTER TABLE `enrollments` DISABLE KEYS */;
-/*!40000 ALTER TABLE `enrollments` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `fraud_events`
@@ -222,10 +199,6 @@ CREATE TABLE `fraud_events` (
 -- Dumping data for table `fraud_events`
 --
 
-LOCK TABLES `fraud_events` WRITE;
-/*!40000 ALTER TABLE `fraud_events` DISABLE KEYS */;
-/*!40000 ALTER TABLE `fraud_events` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Temporary view structure for view `instructors`
@@ -265,10 +238,6 @@ CREATE TABLE `order_items` (
 -- Dumping data for table `order_items`
 --
 
-LOCK TABLES `order_items` WRITE;
-/*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
-/*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `orders`
@@ -294,10 +263,6 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-LOCK TABLES `orders` WRITE;
-/*!40000 ALTER TABLE `orders` DISABLE KEYS */;
-/*!40000 ALTER TABLE `orders` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `payment_attempts`
@@ -331,10 +296,6 @@ CREATE TABLE `payment_attempts` (
 -- Dumping data for table `payment_attempts`
 --
 
-LOCK TABLES `payment_attempts` WRITE;
-/*!40000 ALTER TABLE `payment_attempts` DISABLE KEYS */;
-/*!40000 ALTER TABLE `payment_attempts` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `payment_retries`
@@ -364,10 +325,6 @@ CREATE TABLE `payment_retries` (
 -- Dumping data for table `payment_retries`
 --
 
-LOCK TABLES `payment_retries` WRITE;
-/*!40000 ALTER TABLE `payment_retries` DISABLE KEYS */;
-/*!40000 ALTER TABLE `payment_retries` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `payments`
@@ -398,10 +355,6 @@ CREATE TABLE `payments` (
 -- Dumping data for table `payments`
 --
 
-LOCK TABLES `payments` WRITE;
-/*!40000 ALTER TABLE `payments` DISABLE KEYS */;
-/*!40000 ALTER TABLE `payments` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `sessions`
@@ -425,11 +378,7 @@ CREATE TABLE `sessions` (
 -- Dumping data for table `sessions`
 --
 
-LOCK TABLES `sessions` WRITE;
-/*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
 INSERT INTO `sessions` VALUES ('1S827l0STQoSyRtOaFjeNTbKcbyfExsL','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T17:16:24.422Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 01:16:24.568000','2026-02-03 15:16:24','2026-02-03 15:16:24'),('M19Kx1ip6lIueeRgPi2rXU3kPZSsFJwv','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T18:23:52.654Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 03:15:28.313000','2026-02-03 16:23:52','2026-02-03 17:15:28');
-/*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `subscriptions`
@@ -459,10 +408,6 @@ CREATE TABLE `subscriptions` (
 -- Dumping data for table `subscriptions`
 --
 
-LOCK TABLES `subscriptions` WRITE;
-/*!40000 ALTER TABLE `subscriptions` DISABLE KEYS */;
-/*!40000 ALTER TABLE `subscriptions` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `transactions`
@@ -488,10 +433,6 @@ CREATE TABLE `transactions` (
 -- Dumping data for table `transactions`
 --
 
-LOCK TABLES `transactions` WRITE;
-/*!40000 ALTER TABLE `transactions` DISABLE KEYS */;
-/*!40000 ALTER TABLE `transactions` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `user_kyc`
@@ -520,10 +461,6 @@ CREATE TABLE `user_kyc` (
 -- Dumping data for table `user_kyc`
 --
 
-LOCK TABLES `user_kyc` WRITE;
-/*!40000 ALTER TABLE `user_kyc` DISABLE KEYS */;
-/*!40000 ALTER TABLE `user_kyc` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `users`
@@ -554,11 +491,9 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,'2026-02-03 09:47:19'),(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,'2026-02-03 09:47:19');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
+INSERT INTO `users` (`id`,`name`,`email`,`password_hash`,`role`,`email_verified`,`verification_token`,`password_reset_token`,`password_reset_expires_at`,`created_at`) VALUES
+(1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,NULL,NULL,'2026-02-03 09:47:19'),
+(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,NULL,NULL,'2026-02-03 09:47:19');
 
 --
 -- Table structure for table `wallet`
@@ -580,10 +515,6 @@ CREATE TABLE `wallet` (
 -- Dumping data for table `wallet`
 --
 
-LOCK TABLES `wallet` WRITE;
-/*!40000 ALTER TABLE `wallet` DISABLE KEYS */;
-/*!40000 ALTER TABLE `wallet` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Final view structure for view `instructors`
@@ -613,3 +544,4 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-02-04 11:21:30
+

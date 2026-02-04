@@ -1,7 +1,9 @@
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
-require("dotenv").config();
+const dotenv = require("dotenv");
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 const pool = require("./models/db");
 const MySQLSessionStore = require("./models/mysqlSessionStore");
 

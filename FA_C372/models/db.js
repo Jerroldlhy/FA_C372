@@ -1,4 +1,9 @@
+const path = require("path");
+const dotenv = require("dotenv");
 const mysql = require("mysql2/promise");
+
+dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+dotenv.config({ path: path.resolve(__dirname, "..", "..", ".env") }); // fallback when running from repo root
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
