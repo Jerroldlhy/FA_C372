@@ -21,10 +21,12 @@ const cartController = require("./controllers/cartController");
 const orderController = require("./controllers/orderController");
 const paymentController = require("./controllers/paymentController");
 const dashboardController = require("./controllers/dashboardController");
+const lecturerController = require("./controllers/lecturerController");
 const pageController = require("./controllers/pageController");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
 const { ensureTable: ensureUserActivityTable, logUserActivity } = require("./models/userActivityModel");
+const { ensureAnnouncementsTable } = require("./models/announcementModel");
 const { ensureAccountStatusColumns, ensurePasswordResetColumns } = require("./models/userModel");
 const validators = require("./middleware/validationMiddleware");
 
@@ -149,6 +151,15 @@ app.get(
   authenticateToken,
   requireRole(["lecturer"]),
   dashboardController.lecturerDashboard
+);
+
+app.post(
+  "/dashboard/lecturer/courses/:id/announce",
+  authenticateToken,
+  requireRole(["lecturer"]),
+  validators.validateCourseIdParam,
+  validators.validateAnnouncement,
+  lecturerController.sendCourseAnnouncement
 );
 
 const requireAdmin = (req, res, next) => {
@@ -297,6 +308,7 @@ const startServer = async () => {
   await ensureAccountStatusColumns();
   await ensurePasswordResetColumns();
   await ensureUserActivityTable();
+  await ensureAnnouncementsTable();
   await sessionStore.ensureTable();
   await ensurePaymentTables();
   await ensureSubscriptionTable();

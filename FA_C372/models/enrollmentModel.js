@@ -64,6 +64,49 @@ const getEnrollmentsByUserForAdmin = async (userId) => {
   return rows;
 };
 
+const getEnrollmentsByInstructorCourse = async (lecturerId) => {
+  const [rows] = await pool.query(
+    `SELECT c.id AS course_id, c.course_name, c.category, u.id AS student_id, u.name AS student_name,
+            u.email, e.progress, e.created_at AS enrolled_at
+     FROM enrollments e
+     JOIN courses c ON e.course_id = c.id
+     JOIN users u ON e.student_id = u.id
+     WHERE c.instructor_id = ?
+     ORDER BY c.course_name, e.created_at DESC`,
+    [lecturerId]
+  );
+  return rows;
+};
+
+const getCompletionTrendForInstructor = async (lecturerId, limit = 6) => {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 12));
+  const [rows] = await pool.query(
+    `SELECT DATE_FORMAT(e.created_at, '%Y-%m') AS period, AVG(e.progress) AS avg_progress
+     FROM enrollments e
+     JOIN courses c ON e.course_id = c.id
+     WHERE c.instructor_id = ?
+     GROUP BY period
+     ORDER BY period DESC
+     LIMIT ?`,
+    [lecturerId, safeLimit]
+  );
+  return rows.map((row) => ({
+    period: row.period,
+    avg_progress: Number(row.avg_progress || 0),
+  }));
+};
+
+const getStudentsForCourse = async (courseId) => {
+  const [rows] = await pool.query(
+    `SELECT e.student_id, u.name AS student_name, u.email
+     FROM enrollments e
+     JOIN users u ON e.student_id = u.id
+     WHERE e.course_id = ?`,
+    [courseId]
+  );
+  return rows;
+};
+
 module.exports = {
   getEnrollmentsByStudent,
   isStudentEnrolled,
@@ -71,4 +114,7 @@ module.exports = {
   getEnrollmentsForLecturer,
   getDistinctStudentCount,
   getEnrollmentsByUserForAdmin,
+  getEnrollmentsByInstructorCourse,
+  getCompletionTrendForInstructor,
+  getStudentsForCourse,
 };

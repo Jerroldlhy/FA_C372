@@ -140,9 +140,58 @@ const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
   }
 };
 
+const getLecturerRevenueSummary = async (lecturerId) => {
+  if (!lecturerId) {
+    return {
+      totalRevenue: 0,
+      orderCount: 0,
+      courseCount: 0,
+    };
+  }
+  const [rows] = await pool.query(
+    `SELECT
+       COALESCE(SUM(oi.unit_price * oi.quantity), 0) AS total_revenue,
+       COUNT(DISTINCT oi.order_id) AS order_count,
+       COUNT(DISTINCT c.id) AS course_count
+     FROM order_items oi
+     JOIN courses c ON oi.course_id = c.id
+     WHERE c.instructor_id = ?`,
+    [lecturerId]
+  );
+  const row = rows[0] || {};
+  return {
+    totalRevenue: Number(row.total_revenue || 0),
+    orderCount: Number(row.order_count || 0),
+    courseCount: Number(row.course_count || 0),
+  };
+};
+
+const getLecturerMonthlyRevenue = async (lecturerId, months = 6) => {
+  if (!lecturerId) return [];
+  const safeMonths = Math.max(1, Math.min(Number(months) || 6, 12));
+  const [rows] = await pool.query(
+    `SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS period,
+            SUM(oi.unit_price * oi.quantity) AS revenue
+     FROM order_items oi
+     JOIN courses c ON oi.course_id = c.id
+     JOIN orders o ON oi.order_id = o.id
+     WHERE c.instructor_id = ?
+     GROUP BY period
+     ORDER BY period DESC
+     LIMIT ?`,
+    [lecturerId, safeMonths]
+  );
+  return rows.map((row) => ({
+    period: row.period,
+    revenue: Number(row.revenue || 0),
+  }));
+};
+
 module.exports = {
   CheckoutError,
   createOrderFromCart,
   getOrdersByUser,
   getOrderByIdForUser,
+  getLecturerRevenueSummary,
+  getLecturerMonthlyRevenue,
 };

@@ -90,6 +90,17 @@ const validateCourseIdParam = (req, res, next) => {
   next();
 };
 
+const validateAnnouncement = (req, res, next) => {
+  const title = asTrimmedString(req.body.title, 150);
+  const message = asTrimmedString(req.body.message, 1000);
+  if (!title) {
+    return res.redirect("/dashboard/lecturer?announcement_error=title");
+  }
+  req.body.title = title;
+  req.body.message = message || null;
+  next();
+};
+
 const validateCartQuantityUpdate = (req, res, next) => {
   const courseId = asPositiveInt(req.params.id);
   const quantity = asPositiveInt(req.body.quantity);
@@ -159,5 +170,6 @@ module.exports = {
   validateAdminUserIdParam,
   validateAdminStatusUpdate,
   validateTopUp,
+  validateAnnouncement,
   MAX_CART_QTY,
 };

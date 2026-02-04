@@ -113,7 +113,8 @@ const handleCreateCourse = async (req, res, next) => {
       stock_qty,
       instructor_id: assignedInstructor,
     });
-    res.redirect("/courses?course_created=1");
+    const redirectBase = req.body.redirect_to === "lecturer_dashboard" ? "/dashboard/lecturer" : "/courses";
+    res.redirect(`${redirectBase}?course_created=1`);
   } catch (err) {
     next(err);
   }
@@ -130,6 +131,13 @@ const handleUpdateCourse = async (req, res, next) => {
     if (role === "admin" && req.body.instructor_id && (await isLecturerId(req.body.instructor_id))) {
       assignedInstructor = req.body.instructor_id;
     }
+    const isActiveRaw = req.body.is_active;
+    const normalizedIsActive =
+      typeof isActiveRaw === "undefined"
+        ? course.is_active
+        : ["1", "true", "on"].includes(String(isActiveRaw).toLowerCase())
+        ? 1
+        : 0;
     await updateCourse(req.params.id, {
       course_name: course_name || course.course_name,
       price: price || course.price,
@@ -139,8 +147,10 @@ const handleUpdateCourse = async (req, res, next) => {
       language,
       stock_qty,
       instructor_id: assignedInstructor,
+      is_active: normalizedIsActive,
     });
-    res.redirect("/courses?course_updated=1");
+    const redirectBase = req.body.redirect_to === "lecturer_dashboard" ? "/dashboard/lecturer" : "/courses";
+    res.redirect(`${redirectBase}?course_updated=1`);
   } catch (err) {
     next(err);
   }

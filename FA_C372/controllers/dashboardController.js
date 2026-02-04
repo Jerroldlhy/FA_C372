@@ -2,11 +2,20 @@ const { getWalletBalance, addWalletBalance } = require("../models/walletModel");
 const { getTransactionsForUser, createTransaction, getAllTransactions } = require("../models/transactionModel");
 const {
   getEnrollmentsByStudent,
-  getEnrollmentsForLecturer,
   getDistinctStudentCount,
   getEnrollmentsByUserForAdmin,
+  getEnrollmentsByInstructorCourse,
+  getCompletionTrendForInstructor,
 } = require("../models/enrollmentModel");
-const { getCoursesByInstructor, getCoursesWithStats } = require("../models/courseModel");
+const {
+  getCoursesWithStats,
+  getInstructorCourseSummaries,
+} = require("../models/courseModel");
+const {
+  getLecturerRevenueSummary,
+  getLecturerMonthlyRevenue,
+} = require("../models/orderModel");
+const { getAnnouncementsForLecturer } = require("../models/announcementModel");
 const {
   getAllUsers,
   getUserById,
@@ -31,10 +40,51 @@ const studentDashboard = async (req, res, next) => {
 const lecturerDashboard = async (req, res, next) => {
   try {
     const lecturerId = req.user.id;
-    const courses = await getCoursesByInstructor(lecturerId);
-    const enrollments = await getEnrollmentsForLecturer(lecturerId);
-    const studentCount = await getDistinctStudentCount(lecturerId);
-    res.render("lecturerDashboard", { courses, enrollments, studentCount, status: req.query });
+    const [courses, enrollments, studentCount, completionTrend, announcements, revenueSummary, monthlyRevenue] =
+      await Promise.all([
+        getInstructorCourseSummaries(lecturerId),
+        getEnrollmentsByInstructorCourse(lecturerId),
+        getDistinctStudentCount(lecturerId),
+        getCompletionTrendForInstructor(lecturerId, 6),
+        getAnnouncementsForLecturer(lecturerId, 5),
+        getLecturerRevenueSummary(lecturerId),
+        getLecturerMonthlyRevenue(lecturerId, 6),
+      ]);
+
+    const rosterMap = {};
+    courses.forEach((course) => {
+      rosterMap[course.id] = {
+        courseId: course.id,
+        courseName: course.course_name,
+        students: [],
+      };
+    });
+    enrollments.forEach((row) => {
+      if (!rosterMap[row.course_id]) {
+        rosterMap[row.course_id] = {
+          courseId: row.course_id,
+          courseName: row.course_name,
+          students: [],
+        };
+      }
+      rosterMap[row.course_id].students.push(row);
+    });
+    const rosterList = Object.values(rosterMap);
+    const totalRevenue = courses.reduce((sum, course) => sum + (course.revenue || 0), 0);
+    const totalEnrollments = courses.reduce((sum, course) => sum + (course.enrollment_count || 0), 0);
+
+    res.render("lecturerDashboard", {
+      courses,
+      rosterList,
+      completionTrend,
+      announcements,
+      totalRevenue,
+      totalEnrollments,
+      studentCount,
+      revenueSummary,
+      monthlyRevenue,
+      status: req.query,
+    });
   } catch (err) {
     next(err);
   }

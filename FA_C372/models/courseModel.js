@@ -5,6 +5,14 @@ const parseNumber = (value) => {
   return Number.isFinite(num) ? num : null;
 };
 
+const parseBooleanFlag = (value, fallback = 1) => {
+  if (value === undefined || value === null) return fallback;
+  const normalized = String(value).toLowerCase();
+  if (["1", "true", "on"].includes(normalized)) return 1;
+  if (["0", "false", "off"].includes(normalized)) return 0;
+  return fallback;
+};
+
 const getCoursesWithStats = async (filters = {}) => {
   const where = [];
   const params = [];
@@ -142,11 +150,13 @@ const updateCourse = async (id, course) => {
     language,
     stock_qty,
     instructor_id,
+    is_active,
   } = course;
+  const normalizedIsActive = parseBooleanFlag(is_active, 1);
   await pool.query(
     `UPDATE courses
      SET course_name = ?, price = ?, category = ?, description = ?,
-         level = ?, language = ?, stock_qty = ?, instructor_id = ?
+         level = ?, language = ?, stock_qty = ?, instructor_id = ?, is_active = ?
      WHERE id = ?`,
     [
       course_name,
@@ -157,6 +167,7 @@ const updateCourse = async (id, course) => {
       language || null,
       Number.isFinite(Number(stock_qty)) ? Number(stock_qty) : 0,
       instructor_id || null,
+      normalizedIsActive,
       id,
     ]
   );
@@ -168,7 +179,10 @@ const deleteCourse = async (id) => {
 
 const getCoursesByInstructor = async (lecturerId) => {
   const [rows] = await pool.query(
-    "SELECT id, course_name, category, price FROM courses WHERE instructor_id = ? ORDER BY course_name",
+    `SELECT id, course_name, category, price, level, language, is_active
+     FROM courses
+     WHERE instructor_id = ?
+     ORDER BY course_name`,
     [lecturerId]
   );
   return rows;
@@ -199,6 +213,53 @@ const getInstructorStats = async (instructorIds) => {
   return rows;
 };
 
+const getInstructorCourseSummaries = async (lecturerId) => {
+  const [rows] = await pool.query(
+    `SELECT
+       c.id,
+       c.course_name,
+       c.category,
+       c.price,
+       c.level,
+       c.language,
+       c.is_active,
+       c.description,
+       c.stock_qty,
+       COALESCE(m.enrollment_count, 0) AS enrollment_count,
+       COALESCE(m.avg_progress, 0) AS avg_progress,
+       COALESCE(r.avg_rating, 0) AS avg_rating,
+       COALESCE(o.revenue, 0) AS revenue
+     FROM courses c
+     LEFT JOIN (
+       SELECT course_id, COUNT(*) AS enrollment_count, AVG(progress) AS avg_progress
+       FROM enrollments
+       GROUP BY course_id
+     ) m ON m.course_id = c.id
+     LEFT JOIN (
+       SELECT course_id, AVG(rating) AS avg_rating
+       FROM course_reviews
+       GROUP BY course_id
+     ) r ON r.course_id = c.id
+     LEFT JOIN (
+       SELECT course_id, SUM(unit_price * quantity) AS revenue
+       FROM order_items
+       GROUP BY course_id
+     ) o ON o.course_id = c.id
+     WHERE c.instructor_id = ?
+     ORDER BY c.course_name ASC`,
+    [lecturerId]
+  );
+  return rows.map((row) => ({
+    ...row,
+    enrollment_count: Number(row.enrollment_count || 0),
+    avg_progress: Number(row.avg_progress || 0),
+    avg_rating: Number(row.avg_rating || 0),
+    revenue: Number(row.revenue || 0),
+    stock_qty: Number(row.stock_qty || 0),
+    description: row.description || "",
+  }));
+};
+
 module.exports = {
   getCoursesWithStats,
   getCourseFilterOptions,
@@ -209,4 +270,5 @@ module.exports = {
   getCoursesByInstructor,
   getCoursesForInstructors,
   getInstructorStats,
+  getInstructorCourseSummaries,
 };

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -16,79 +16,377 @@
     />
     <link rel="stylesheet" href="/styles/style.css" />
   </head>
-  <body class="instructor-dashboard">
+  <body class="instructor-dashboard lecturer-dashboard">
     <%- include("partials/navbar") %>
-    <main class="section instructor-section">
+    <main class="section instructor-section lecturer-dashboard">
       <div class="container">
-        <header class="instructor-hero mb-4">
+        <header class="lecturer-header mb-4">
           <div>
-            <p class="eyebrow text-uppercase text-muted mb-1">Lecturer Workspace</p>
-            <h1 class="display-5 fw-bold mb-2">Create, update, and monitor your courses</h1>
-            <p class="text-muted">
-              Track enrolments, open new learning paths, and review student progress without leaving
-              the portal.
+            <p class="eyebrow text-uppercase text-muted mb-1">Lecturer workspace</p>
+            <h1 class="display-5 fw-bold mb-2">Own, polish, and ship your learning paths</h1>
+            <p class="text-muted mb-0">
+              Track enrollments, publish updates, and keep every student in the loop without leaving the dashboard.
             </p>
           </div>
-          <div class="instructor-stats">
+          <div class="lecturer-header-stats">
             <div>
               <strong><%= courses.length %></strong>
-              <p class="text-muted small mb-0">Active courses</p>
+              <span>Courses</span>
+            </div>
+            <div>
+              <strong><%= totalEnrollments %></strong>
+              <span>Enrollments</span>
+            </div>
+            <div>
+              <strong>$<%= Number(totalRevenue || 0).toFixed(2) %></strong>
+              <span>Revenue</span>
             </div>
             <div>
               <strong><%= studentCount %></strong>
-              <p class="text-muted small mb-0">Learners engaged</p>
+              <span>Active learners</span>
             </div>
           </div>
         </header>
 
-        <% if (status?.course_created) { %>
-          <div class="alert alert-success">Course created.</div>
+        <% const alertStatus = status || {}; %>
+        <% if (alertStatus.course_created || alertStatus.course_updated) { %>
+          <div class="alert alert-success mb-3">
+            <strong class="me-2">Done!</strong>
+            <span>
+              <%= alertStatus.course_updated ? "Course saved." : "Course created." %>
+            </span>
+          </div>
         <% } %>
+        <% if (alertStatus.announcement_sent) { %>
+          <div class="alert alert-success mb-3">
+            Announcement successfully sent to enrolled learners.
+          </div>
+        <% } %>
+        <% if (alertStatus.announcement_error) { %>
+          <div class="alert alert-danger mb-3">
+            <strong>Heads up:</strong> Please give your announcement a title before sending.
+          </div>
+        <% } %>
+
         <section class="row g-4">
-          <div class="col-12 col-lg-6">
-            <div class="card shadow-sm instructor-card">
+          <div class="col-12">
+            <div class="card shadow-sm revenue-card">
               <div class="card-body">
-                <h5 class="card-title mb-3">Your courses</h5>
-                <% if (!courses.length) { %>
-                  <p class="text-muted small">You have not published any courses yet.</p>
+                <div class="revenue-header">
+                  <div class="revenue-title">
+                    <span class="badge-status badge-status-warning text-uppercase">Admin-managed</span>
+                    <div>
+                      <h5 class="card-title mb-1">Revenue + payout overview</h5>
+                      <p class="text-muted mb-0">
+                        Totals are derived from students who purchased your courses. Payouts are issued by the admin team.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="text-muted small text-end revenue-note">
+                    <p class="mb-1">Read-only</p>
+                    <span>Contact finance for disbursements</span>
+                  </div>
+                </div>
+                <div class="revenue-stats mt-4">
+                  <div>
+                    <span>Total revenue</span>
+                    <strong>$<%= Number(revenueSummary?.totalRevenue || 0).toFixed(2) %></strong>
+                  </div>
+                  <div>
+                    <span>Orders processed</span>
+                    <strong><%= revenueSummary?.orderCount || 0 %></strong>
+                  </div>
+                  <div>
+                    <span>Courses with sales</span>
+                    <strong><%= revenueSummary?.courseCount || 0 %></strong>
+                  </div>
+                </div>
+                <% if (monthlyRevenue?.length) { %>
+                  <div class="monthly-list mt-3">
+                    <% monthlyRevenue.forEach(function(point) { %>
+                      <div class="monthly-row">
+                        <span><%= point.period %></span>
+                        <strong>$<%= Number(point.revenue || 0).toFixed(2) %></strong>
+                      </div>
+                    <% }); %>
+                  </div>
                 <% } else { %>
-                  <div class="list-group">
+                  <p class="text-muted small mt-3 mb-0">Revenue will appear here once learners purchase your courses.</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="row g-4 mt-1">
+          <div class="col-lg-8">
+            <div class="card shadow-sm course-card">
+              <div class="card-body">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-3">
+                  <div>
+                    <h5 class="card-title mb-1">Course analytics & management</h5>
+                    <p class="text-muted small mb-0">You control only your portfolio.</p>
+                  </div>
+                  <div class="badge-status badge-status-success text-uppercase">Published</div>
+                </div>
+                <% if (!courses.length) { %>
+                  <p class="text-muted small mb-0">Publish your first course to start collecting data.</p>
+                <% } else { %>
+                  <div class="course-list">
                     <% courses.forEach(function(course) { %>
-                      <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                          <strong><%= course.course_name %></strong>
-                          <p class="text-muted small mb-0"><%= course.category || "General" %></p>
+                      <div class="course-panel">
+                        <div class="course-panel-header">
+                          <div>
+                            <strong><%= course.course_name %></strong>
+                            <p class="text-muted small mb-0">
+                              <%= course.category || "General" %> ·
+                              <%= course.level || "All levels" %> ·
+                              <%= course.language || "Any language" %>
+                            </p>
+                          </div>
+                          <span class="badge-status <%= course.is_active ? "badge-status-success" : "badge-status-muted" %>">
+                            <%= course.is_active ? "Published" : "Draft" %>
+                          </span>
                         </div>
-                        <span class="text-muted small">$<%= Number(course.price).toFixed(2) %></span>
+                        <div class="course-metrics">
+                          <div>
+                            <span>Enrollments</span>
+                            <strong><%= course.enrollment_count %></strong>
+                          </div>
+                          <div>
+                            <span>Revenue</span>
+                            <strong>$<%= Number(course.revenue || 0).toFixed(2) %></strong>
+                          </div>
+                          <div>
+                            <span>Avg. rating</span>
+                            <strong><%= Number(course.avg_rating || 0).toFixed(1) %></strong>
+                          </div>
+                          <div>
+                            <span>Avg. progress</span>
+                            <strong><%= Number(course.avg_progress || 0).toFixed(1) %>%</strong>
+                          </div>
+                        </div>
+                        <form method="POST" action="/courses/<%= course.id %>/update">
+                          <input type="hidden" name="redirect_to" value="lecturer_dashboard" />
+                          <div class="row g-2">
+                            <div class="col-sm-6">
+                              <label class="form-label small">Title</label>
+                              <input
+                                class="form-control form-control-sm"
+                                name="course_name"
+                                value="<%= course.course_name %>"
+                                required
+                              />
+                            </div>
+                            <div class="col-sm-6">
+                              <label class="form-label small">Price</label>
+                              <input
+                                class="form-control form-control-sm"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                name="price"
+                                value="<%= Number(course.price || 0).toFixed(2) %>"
+                                required
+                              />
+                            </div>
+                          </div>
+                          <div class="row g-2 mt-2">
+                            <div class="col-sm-4">
+                              <label class="form-label small">Category</label>
+                            <input class="form-control form-control-sm" name="category" value="<%= course.category || '' %>" />
+                            </div>
+                            <div class="col-sm-4">
+                              <label class="form-label small">Level</label>
+                              <input class="form-control form-control-sm" name="level" value="<%= course.level || '' %>" />
+                            </div>
+                            <div class="col-sm-4">
+                              <label class="form-label small">Language</label>
+                              <input class="form-control form-control-sm" name="language" value="<%= course.language || '' %>" />
+                            </div>
+                          </div>
+                          <div class="row g-2 mt-2">
+                            <div class="col-4">
+                              <label class="form-label small">Stock</label>
+                              <input
+                                class="form-control form-control-sm"
+                                type="number"
+                                min="0"
+                                name="stock_qty"
+                                value="<%= course.stock_qty %>"
+                              />
+                            </div>
+                            <div class="col-8">
+                              <label class="form-label small">Description</label>
+                              <textarea
+                                class="form-control form-control-sm"
+                                name="description"
+                                rows="1"
+                              ><%= course.description %></textarea>
+                            </div>
+                          </div>
+                          <div class="form-check form-switch mt-2">
+                            <input
+                              class="form-check-input"
+                              type="checkbox"
+                              id="courseActive_<%= course.id %>"
+                              name="is_active"
+                              value="1"
+                              <%= course.is_active ? "checked" : "" %>
+                            />
+                            <label class="form-check-label small" for="courseActive_<%= course.id %>">
+                              Published
+                            </label>
+                          </div>
+                          <button class="btn btn-primary btn-sm mt-2" type="submit">Save changes</button>
+                        </form>
                       </div>
                     <% }); %>
                   </div>
                 <% } %>
               </div>
             </div>
-          </div>
-
-          <div class="col-12 col-lg-6">
-            <div class="card shadow-sm instructor-card">
+            <div class="card shadow-sm trend-card mt-4">
               <div class="card-body">
-                <h5 class="card-title mb-3">Recent student progress</h5>
-                <% if (!enrollments.length) { %>
-                  <p class="text-muted small">No progress data yet.</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Completion trend</h5>
+                  <span class="text-muted small">Monthly progress</span>
+                </div>
+                <% if (!completionTrend.length) { %>
+                  <p class="text-muted small mb-0">Progress data appears as learners move through your courses.</p>
                 <% } else { %>
-                  <div class="progress-table">
-                    <% enrollments.forEach(function(item) { %>
-                      <div class="progress-row">
-                        <div>
-                          <strong><%= item.student_name %></strong>
-                          <p class="text-muted small mb-0"><%= item.course_name %></p>
-                        </div>
-                        <div class="progress-track">
-                          <div class="progress-bar" style="width:<%= Number(item.progress || 0) %>%"></div>
-                        </div>
-                        <span class="text-muted small"><%= Number(item.progress || 0) %>%</span>
-                      </div>
+                  <ul class="list-group list-group-flush">
+                    <% completionTrend.forEach(function(point) { %>
+                      <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><%= point.period %></span>
+                        <strong><%= Number(point.avg_progress || 0).toFixed(1) %>%</strong>
+                      </li>
                     <% }); %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="card shadow-sm creation-card">
+              <div class="card-body">
+                <h5 class="card-title mb-3">Create a new course</h5>
+                <form method="POST" action="/courses">
+                  <input type="hidden" name="redirect_to" value="lecturer_dashboard" />
+                  <div class="mb-3">
+                    <label class="form-label small" for="course_name">Course title</label>
+                    <input class="form-control form-control-sm" id="course_name" name="course_name" required />
                   </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="price">Price</label>
+                    <input class="form-control form-control-sm" id="price" name="price" type="number" min="0" step="0.01" required />
+                  </div>
+                  <div class="row g-2 mb-3">
+                    <div class="col-6">
+                      <label class="form-label small" for="category">Category</label>
+                      <input class="form-control form-control-sm" id="category" name="category" />
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small" for="level">Level</label>
+                      <input class="form-control form-control-sm" id="level" name="level" />
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="language">Language</label>
+                    <input class="form-control form-control-sm" id="language" name="language" />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="description">Description</label>
+                    <textarea class="form-control form-control-sm" id="description" name="description" rows="2"></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="stock_qty">Stock quantity</label>
+                    <input class="form-control form-control-sm" id="stock_qty" name="stock_qty" type="number" min="0" value="0" />
+                  </div>
+                  <button type="submit" class="btn btn-gradient w-100">Publish course</button>
+                </form>
+              </div>
+            </div>
+            <div class="card shadow-sm announcement-card mt-4">
+              <div class="card-body">
+                <h5 class="card-title mb-3">Recent announcements</h5>
+                <% if (!announcements.length) { %>
+                  <p class="text-muted small mb-0">No announcements have been sent yet.</p>
+                <% } else { %>
+                  <ul class="list-group list-group-flush">
+                    <% announcements.forEach(function(note) { %>
+                      <li class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                          <strong><%= note.title %></strong>
+                          <span class="text-muted small">
+                            <%= new Date(note.created_at).toLocaleDateString() %>
+                          </span>
+                        </div>
+                        <p class="text-muted small mb-0">
+                          <%= note.course_name %>
+                        </p>
+                        <% if (note.message) { %>
+                          <p class="text-muted small mb-0 text-truncate"><%= note.message %></p>
+                        <% } %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="row g-4 mt-3">
+          <div class="col-12">
+            <div class="card shadow-sm roster-card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Learner roster & messaging</h5>
+                  <span class="text-muted small">Send course-specific announcements</span>
+                </div>
+                <% if (!rosterList.length) { %>
+                  <p class="text-muted small mb-0">Add a course to begin inviting learners.</p>
+                <% } else { %>
+                  <% rosterList.forEach(function(courseRoster) { %>
+                    <div class="roster-section mb-4">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><%= courseRoster.courseName %></strong>
+                        <span class="text-muted small"><%= courseRoster.students.length %> learner(s)</span>
+                      </div>
+                      <% if (!courseRoster.students.length) { %>
+                        <p class="text-muted small mb-3">No learners enrolled yet.</p>
+                      <% } else { %>
+                        <ul class="list-group list-group-flush mb-3">
+                          <% courseRoster.students.forEach(function(student) { %>
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                              <div>
+                                <strong><%= student.student_name %></strong>
+                                <p class="text-muted small mb-0"><%= student.email %></p>
+                              </div>
+                              <div class="text-end">
+                                <span class="text-muted small d-block">Progress</span>
+                                <strong><%= Number(student.progress || 0) %>%</strong>
+                              </div>
+                            </li>
+                          <% }); %>
+                        </ul>
+                      <% } %>
+                      <form method="POST" action="/dashboard/lecturer/courses/<%= courseRoster.courseId %>/announce">
+                        <div class="row g-2">
+                          <div class="col-12">
+                            <label class="form-label small">Announcement title</label>
+                            <input class="form-control form-control-sm" name="title" required />
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label small">Message</label>
+                            <textarea class="form-control form-control-sm" name="message" rows="2"></textarea>
+                          </div>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary btn-sm mt-2">Message learners</button>
+                      </form>
+                    </div>
+                  <% }); %>
                 <% } %>
               </div>
             </div>
