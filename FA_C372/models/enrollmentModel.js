@@ -1,8 +1,22 @@
 const pool = require("./db");
 
+const ensureCompletionColumn = async () => {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'enrollments'
+       AND COLUMN_NAME = 'completed_at'
+     LIMIT 1`
+  );
+  if (!rows.length) {
+    await pool.query("ALTER TABLE enrollments ADD COLUMN completed_at DATETIME NULL");
+  }
+};
+
 const getEnrollmentsByStudent = async (studentId) => {
   const [rows] = await pool.query(
-    `SELECT e.id, e.progress, c.id AS course_id, c.course_name, c.category, c.price
+    `SELECT e.id, e.progress, e.completed_at, c.id AS course_id, c.course_name, c.category, c.price
      FROM enrollments e
      INNER JOIN courses c ON e.course_id = c.id
      WHERE e.student_id = ?
@@ -29,7 +43,7 @@ const createEnrollment = async (courseId, studentId) => {
 
 const getEnrollmentByStudentAndCourse = async (studentId, courseId) => {
   const [rows] = await pool.query(
-    `SELECT id, course_id, student_id, progress, created_at
+    `SELECT id, course_id, student_id, progress, created_at, completed_at
      FROM enrollments
      WHERE student_id = ? AND course_id = ?
      LIMIT 1`,
@@ -42,10 +56,43 @@ const updateEnrollmentProgress = async (studentId, courseId, progress) => {
   const safeProgress = Math.max(0, Math.min(Number(progress) || 0, 100));
   await pool.query(
     `UPDATE enrollments
-     SET progress = ?
+     SET progress = ?,
+         completed_at = CASE
+           WHEN ? >= 100 THEN COALESCE(completed_at, NOW())
+           ELSE completed_at
+         END
      WHERE student_id = ? AND course_id = ?`,
-    [safeProgress, studentId, courseId]
+    [safeProgress, safeProgress, studentId, courseId]
   );
+};
+
+const getCompletedEnrollmentCertificateData = async (studentId, courseId) => {
+  const [rows] = await pool.query(
+    `SELECT
+       e.id AS enrollment_id,
+       e.course_id,
+       e.student_id,
+       e.progress,
+       e.created_at AS enrolled_at,
+       e.completed_at,
+       c.course_name,
+       c.category,
+       c.created_at AS course_created_at,
+       u.name AS student_name,
+       u.email AS student_email,
+       i.name AS instructor_name
+     FROM enrollments e
+     JOIN courses c ON c.id = e.course_id
+     JOIN users u ON u.id = e.student_id
+     LEFT JOIN users i ON i.id = c.instructor_id
+     WHERE e.student_id = ? AND e.course_id = ?
+     LIMIT 1`,
+    [studentId, courseId]
+  );
+  const row = rows[0] || null;
+  if (!row) return null;
+  if (Number(row.progress || 0) < 100) return null;
+  return row;
 };
 
 const getEnrollmentsForLecturer = async (lecturerId) => {
@@ -160,6 +207,7 @@ const getRosterForInstructorCourse = async (lecturerId, courseId) => {
 };
 
 module.exports = {
+  ensureCompletionColumn,
   getEnrollmentsByStudent,
   isStudentEnrolled,
   createEnrollment,
@@ -173,4 +221,5 @@ module.exports = {
   getRosterForInstructorCourse,
   getEnrollmentByStudentAndCourse,
   updateEnrollmentProgress,
+  getCompletedEnrollmentCertificateData,
 };

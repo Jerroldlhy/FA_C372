@@ -26,6 +26,8 @@
         <div class="hero-cta">
           <a class="btn btn-outline-primary" href="/admin/reports/sales/export?format=csv&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export CSV</a>
           <a class="btn btn-primary" href="/admin/reports/sales/export?format=pdf&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export PDF</a>
+          <a class="btn btn-outline-secondary" href="/admin/reports/fraud">Fraud audit report</a>
+          <a class="btn btn-outline-secondary" href="/admin/reports/audit">Audit log report</a>
           <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
         </div>
       </section>

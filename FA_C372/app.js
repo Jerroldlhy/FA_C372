@@ -27,6 +27,7 @@ const lecturerController = require("./controllers/lecturerController");
 const learningController = require("./controllers/learningController");
 const pageController = require("./controllers/pageController");
 const reportController = require("./controllers/reportController");
+const { ensureCompletionColumn } = require("./models/enrollmentModel");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
 const { ensureTable: ensureUserActivityTable, logUserActivity } = require("./models/userActivityModel");
@@ -243,6 +244,30 @@ app.get(
   requireAdmin,
   reportController.exportSalesReport
 );
+app.get(
+  "/admin/reports/fraud",
+  authenticateToken,
+  requireAdmin,
+  reportController.showFraudAuditReport
+);
+app.get(
+  "/admin/reports/fraud/export",
+  authenticateToken,
+  requireAdmin,
+  reportController.exportFraudAuditReport
+);
+app.get(
+  "/admin/reports/audit",
+  authenticateToken,
+  requireAdmin,
+  reportController.showAuditLogReport
+);
+app.get(
+  "/admin/reports/audit/export",
+  authenticateToken,
+  requireAdmin,
+  reportController.exportAuditLogReport
+);
 
 app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
 app.post("/wallet/payment/start", authenticateToken, requireRole(["student"]), validators.validateTopUp, paymentController.startWalletTopUpPayment);
@@ -264,6 +289,12 @@ app.post(
   authenticateToken,
   requireRole(["student"]),
   learningController.completeLesson
+);
+app.get(
+  "/learning/:courseId/certificate",
+  authenticateToken,
+  requireRole(["student"]),
+  learningController.downloadCertificate
 );
 app.post(
   "/cart/:id/remove",
@@ -350,6 +381,7 @@ const startServer = async () => {
   await ensureAccountStatusColumns();
   await ensurePasswordResetColumns();
   await ensureUserActivityTable();
+  await ensureCompletionColumn();
   await ensureAnnouncementsTable();
   await ensureRecipientCountColumn();
   await sessionStore.ensureTable();

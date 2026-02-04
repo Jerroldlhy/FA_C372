@@ -88,9 +88,73 @@ const buildSalesSummary = (rows = []) => {
   };
 };
 
+const getFraudAuditRows = async ({ fromDate, toDate, severity } = {}) => {
+  const where = [];
+  const params = [];
+  if (isValidDateInput(fromDate)) {
+    where.push("fe.created_at >= ?");
+    params.push(String(fromDate).trim());
+  }
+  if (isValidDateInput(toDate)) {
+    where.push("fe.created_at < DATE_ADD(?, INTERVAL 1 DAY)");
+    params.push(String(toDate).trim());
+  }
+
+  const severityValue = String(severity || "").toLowerCase();
+  if (severityValue && ["low", "medium", "high"].includes(severityValue)) {
+    where.push("fe.severity = ?");
+    params.push(severityValue);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const [rows] = await pool.query(
+    `SELECT
+       fe.id,
+       fe.created_at,
+       fe.user_id,
+       u.name AS user_name,
+       u.email AS user_email,
+       fe.rule_code,
+       fe.severity,
+       fe.details
+     FROM fraud_events fe
+     LEFT JOIN users u ON u.id = fe.user_id
+     ${whereSql}
+     ORDER BY fe.created_at DESC, fe.id DESC`,
+    params
+  );
+  return rows;
+};
+
+const buildFraudAuditSummary = (rows = []) => {
+  const summary = {
+    totalEvents: Number(rows.length || 0),
+    low: 0,
+    medium: 0,
+    high: 0,
+    topRules: [],
+  };
+  const ruleMap = new Map();
+
+  rows.forEach((row) => {
+    const severity = String(row.severity || "").toLowerCase();
+    if (summary[severity] !== undefined) summary[severity] += 1;
+    const rule = String(row.rule_code || "ok");
+    ruleMap.set(rule, Number(ruleMap.get(rule) || 0) + 1);
+  });
+
+  summary.topRules = [...ruleMap.entries()]
+    .map(([ruleCode, total]) => ({ ruleCode, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10);
+  return summary;
+};
+
 module.exports = {
   DATE_PATTERN,
   isValidDateInput,
   getSalesReportRows,
   buildSalesSummary,
+  getFraudAuditRows,
+  buildFraudAuditSummary,
 };

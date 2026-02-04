@@ -39,6 +39,9 @@
         <% if (status?.error === "invalid_lesson") { %>
           <div class="alert alert-danger">Invalid lesson request.</div>
         <% } %>
+        <% if (status?.cert_error === "pdf_missing") { %>
+          <div class="alert alert-warning">Certificate service is currently unavailable.</div>
+        <% } %>
 
         <div class="dashboard-panel">
           <% if (!enrollments || enrollments.length === 0) { %>
@@ -65,7 +68,12 @@
                       ></div>
                     </div>
                     <p class="text-muted small mb-3"><%= progress %>% complete</p>
-                    <a class="btn btn-sm btn-outline-primary" href="/learning/<%= item.course_id %>">Continue learning</a>
+                    <div class="d-flex flex-wrap gap-2">
+                      <a class="btn btn-sm btn-outline-primary" href="/learning/<%= item.course_id %>">Continue learning</a>
+                      <% if (progress >= 100) { %>
+                        <a class="btn btn-sm btn-primary" href="/learning/<%= item.course_id %>/certificate">Download certificate</a>
+                      <% } %>
+                    </div>
                   </article>
                 </div>
               <% }); %>

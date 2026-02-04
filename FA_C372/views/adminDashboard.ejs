@@ -46,6 +46,8 @@
       <section class="dashboard-panel card shadow-sm mb-4">
         <div class="card-body d-flex flex-wrap gap-2">
           <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/sales">View sales report</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/fraud">View fraud audit</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/audit">View audit logs</a>
           <a class="btn btn-outline-secondary btn-sm" href="#add-course-form">Add new course</a>
           <a class="btn btn-outline-secondary btn-sm" href="#users-panel">Manage users</a>
           <a class="btn btn-outline-secondary btn-sm" href="#courses-panel">Manage courses</a>
@@ -98,6 +100,9 @@
       <% } %>
       <% if (status && status.report_error === "invalid_format") { %>
         <div class="alert alert-danger">Unsupported report format selected.</div>
+      <% } %>
+      <% if (status && status.report_error === "invalid_severity") { %>
+        <div class="alert alert-danger">Unsupported severity filter selected.</div>
       <% } %>
       <% if (status && status.report_error === "pdfkit_missing") { %>
         <div class="alert alert-warning">PDF export dependency is missing. Run npm install to install project dependencies.</div>

@@ -32,6 +32,19 @@
         <% if (status?.progress_updated) { %>
           <div class="alert alert-success">Progress updated.</div>
         <% } %>
+        <% if (status?.cert_error === "not_completed") { %>
+          <div class="alert alert-info">Complete 100% of this course to unlock your certificate.</div>
+        <% } %>
+        <% if (status?.cert_error === "pdf_missing") { %>
+          <div class="alert alert-warning">Certificate service is currently unavailable.</div>
+        <% } %>
+        <% if (progress >= 100) { %>
+          <div class="dashboard-panel mb-4">
+            <h5 class="mb-2">Course completed</h5>
+            <p class="text-muted mb-3">Great job. You can now download your completion certificate.</p>
+            <a class="btn btn-primary" href="/learning/<%= course.id %>/certificate">Download certificate (PDF)</a>
+          </div>
+        <% } %>
 
         <section class="dashboard-panel mb-4">
           <h5>Protected course content</h5>
