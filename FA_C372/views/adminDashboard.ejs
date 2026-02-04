@@ -70,6 +70,15 @@
       <% if (status && status.role_updated === "self") { %>
         <div class="alert alert-warning">You cannot change your own role.</div>
       <% } %>
+      <% if (status && status.status_updated === "invalid") { %>
+        <div class="alert alert-danger">Invalid account status request.</div>
+      <% } %>
+      <% if (status && status.status_updated === "not_found") { %>
+        <div class="alert alert-danger">Target user not found.</div>
+      <% } %>
+      <% if (status && status.user === "not_found") { %>
+        <div class="alert alert-danger">User not found.</div>
+      <% } %>
 
       <section class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
         <article class="stat-card col">
@@ -110,28 +119,35 @@
                     <th>ID</th>
                     <th>Name</th>
                     <th>Email</th>
+                    <th>Status</th>
                     <th>Role</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   <% if (!users || users.length === 0) { %>
                     <tr>
-                      <td colspan="4" class="text-muted small text-center">
+                      <td colspan="6" class="text-muted small text-center">
                         No users found.
                       </td>
                     </tr>
                   <% } else { %>
                     <% users.forEach(function (user) { %>
-                      <tr>
+                      <tr class="user-row" data-href="/admin/users/<%= user.id %>">
                         <td><%= user.id %></td>
                         <td><%= user.name %></td>
                         <td class="text-break"><%= user.email %></td>
                         <td>
+                          <span class="status-badge <%= user.account_status === 'suspended' ? 'status-badge-warning' : 'status-badge-success' %>">
+                            <%= user.account_status || "active" %>
+                          </span>
+                        </td>
+                        <td>
                           <form method="POST" action="/admin/users/<%= user.id %>/role" class="d-flex gap-2">
-                            <select class="form-select form-select-sm" name="role" <%= Number(currentUser?.id) === Number(user.id) ? "disabled" : "" %>>
-                              <option value="student" <%= user.role === "student" ? "selected" : "" %>>student</option>
-                              <option value="lecturer" <%= user.role === "lecturer" ? "selected" : "" %>>lecturer</option>
-                              <option value="admin" <%= user.role === "admin" ? "selected" : "" %>>admin</option>
+                            <select class="form-select form-select-sm role-select" name="role" <%= Number(currentUser?.id) === Number(user.id) ? "disabled" : "" %>>
+                              <option value="student" <%= user.role === "student" ? "selected" : "" %>>Student</option>
+                              <option value="lecturer" <%= user.role === "lecturer" ? "selected" : "" %>>Lecturer</option>
+                              <option value="admin" <%= user.role === "admin" ? "selected" : "" %>>Admin</option>
                             </select>
                             <% if (Number(currentUser?.id) === Number(user.id)) { %>
                               <button class="btn btn-sm btn-outline-secondary" type="button" disabled>Current</button>
@@ -362,5 +378,14 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script>
+      document.querySelectorAll(".user-row").forEach((row) => {
+        row.addEventListener("click", (event) => {
+          if (event.target.closest("button, a, select, input, form, textarea, label")) return;
+          const href = row.getAttribute("data-href");
+          if (href) window.location.href = href;
+        });
+      });
+    </script>
   </body>
 </html>

@@ -1055,6 +1055,14 @@ img {
   padding-bottom: 1rem;
 }
 
+.admin-table .user-row {
+  cursor: pointer;
+}
+
+.admin-table .role-select {
+  min-width: 130px;
+}
+
 .status-badge {
   border-radius: 999px;
   padding: 0.15rem 0.9rem;

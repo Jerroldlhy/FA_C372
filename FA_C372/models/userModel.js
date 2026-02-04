@@ -1,20 +1,69 @@
 const pool = require("./db");
 
+const columnExists = async (tableName, columnName) => {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+  return rows.length > 0;
+};
+
+const indexExists = async (tableName, indexName) => {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND INDEX_NAME = ?
+     LIMIT 1`,
+    [tableName, indexName]
+  );
+  return rows.length > 0;
+};
+
+const ensureAccountStatusColumns = async () => {
+  if (!(await columnExists("users", "account_status"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'"
+    );
+  }
+  if (!(await columnExists("users", "suspended_at"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN suspended_at DATETIME NULL"
+    );
+  }
+};
+
 const ensurePasswordResetColumns = async () => {
-  await pool.query(
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(128) NULL"
-  );
-  await pool.query(
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at DATETIME NULL"
-  );
-  await pool.query(
-    "CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token)"
-  );
+  if (!(await columnExists("users", "password_reset_token"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN password_reset_token VARCHAR(128) NULL"
+    );
+  }
+  if (!(await columnExists("users", "password_reset_expires_at"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN password_reset_expires_at DATETIME NULL"
+    );
+  }
+  if (!(await indexExists("users", "idx_users_password_reset_token"))) {
+    await pool.query(
+      "CREATE INDEX idx_users_password_reset_token ON users (password_reset_token)"
+    );
+  }
 };
 
 const getUserByEmail = async (email) => {
   const [rows] = await pool.query(
-    "SELECT id, name, email, password_hash, role, email_verified FROM users WHERE email = ? LIMIT 1",
+    `SELECT id, name, email, password_hash, role, email_verified,
+            COALESCE(account_status, 'active') AS account_status, suspended_at
+     FROM users
+     WHERE email = ?
+     LIMIT 1`,
     [email]
   );
   return rows[0] || null;
@@ -22,7 +71,11 @@ const getUserByEmail = async (email) => {
 
 const getUserById = async (userId) => {
   const [rows] = await pool.query(
-    "SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1",
+    `SELECT id, name, email, role,
+            COALESCE(account_status, 'active') AS account_status, suspended_at
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
     [userId]
   );
   return rows[0] || null;
@@ -87,7 +140,9 @@ const updatePasswordByUserId = async (userId, passwordHash) => {
 
 const getAllUsers = async () => {
   const [rows] = await pool.query(
-    "SELECT id, name, email, role FROM users ORDER BY role, name"
+    `SELECT id, name, email, role, COALESCE(account_status, 'active') AS account_status
+     FROM users
+     ORDER BY role, name`
   );
   return rows;
 };
@@ -115,7 +170,19 @@ const updateUserRole = async (userId, role) => {
   );
 };
 
+const updateUserAccountStatus = async (userId, status) => {
+  const safeStatus = String(status || "").toLowerCase() === "suspended" ? "suspended" : "active";
+  await pool.query(
+    `UPDATE users
+     SET account_status = ?,
+         suspended_at = CASE WHEN ? = 'suspended' THEN UTC_TIMESTAMP() ELSE NULL END
+     WHERE id = ?`,
+    [safeStatus, safeStatus, userId]
+  );
+};
+
 module.exports = {
+  ensureAccountStatusColumns,
   ensurePasswordResetColumns,
   getUserById,
   getUserByEmail,
@@ -130,4 +197,5 @@ module.exports = {
   getLecturers,
   isLecturerId,
   updateUserRole,
+  updateUserAccountStatus,
 };

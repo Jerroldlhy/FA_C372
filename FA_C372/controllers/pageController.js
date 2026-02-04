@@ -2,6 +2,7 @@ const { getCoursesWithStats, getCoursesForInstructors, getInstructorStats } = re
 const { getLecturers } = require("../models/userModel");
 const { getReviewsForCourses } = require("../models/reviewModel");
 const { getSubscriptionByUser, upsertSubscription } = require("../models/subscriptionModel");
+const { logUserActivity } = require("../models/userActivityModel");
 
 const home = async (req, res, next) => {
   try {
@@ -69,6 +70,13 @@ const subscribePlan = async (req, res, next) => {
       monthlyPrice,
       status,
       startsAt: new Date(),
+    });
+    await logUserActivity({
+      userId: req.user.id,
+      actorUserId: req.user.id,
+      activityType: "plan_subscribed",
+      ipAddress: req.ip,
+      details: { planCode: plan.code, status },
     });
 
     return res.redirect(`/plans?subscription_success=1&plan=${encodeURIComponent(plan.code)}`);

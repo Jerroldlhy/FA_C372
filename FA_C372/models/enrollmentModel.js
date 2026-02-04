@@ -52,10 +52,23 @@ const getDistinctStudentCount = async (lecturerId) => {
   return rows[0]?.student_count || 0;
 };
 
+const getEnrollmentsByUserForAdmin = async (userId) => {
+  const [rows] = await pool.query(
+    `SELECT e.id, e.progress, e.created_at, c.id AS course_id, c.course_name, c.category, c.price
+     FROM enrollments e
+     JOIN courses c ON e.course_id = c.id
+     WHERE e.student_id = ?
+     ORDER BY e.created_at DESC`,
+    [userId]
+  );
+  return rows;
+};
+
 module.exports = {
   getEnrollmentsByStudent,
   isStudentEnrolled,
   createEnrollment,
   getEnrollmentsForLecturer,
   getDistinctStudentCount,
+  getEnrollmentsByUserForAdmin,
 };

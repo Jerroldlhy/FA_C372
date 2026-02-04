@@ -24,6 +24,8 @@ const dashboardController = require("./controllers/dashboardController");
 const pageController = require("./controllers/pageController");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
+const { ensureTable: ensureUserActivityTable, logUserActivity } = require("./models/userActivityModel");
+const { ensureAccountStatusColumns, ensurePasswordResetColumns } = require("./models/userModel");
 const validators = require("./middleware/validationMiddleware");
 
 const sessionTtlHours = Number(process.env.SESSION_TTL_HOURS || 2);
@@ -192,6 +194,20 @@ app.post(
   validators.validateAdminRoleUpdate,
   dashboardController.updateRole
 );
+app.get(
+  "/admin/users/:id",
+  authenticateToken,
+  requireAdmin,
+  validators.validateAdminUserIdParam,
+  dashboardController.adminUserDetails
+);
+app.post(
+  "/admin/users/:id/status",
+  authenticateToken,
+  requireAdmin,
+  validators.validateAdminStatusUpdate,
+  dashboardController.updateUserStatus
+);
 
 app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
 app.get("/wallet", authenticateToken, requireRole(["student"]), dashboardController.walletPage);
@@ -241,10 +257,21 @@ app.post("/api/payments/mark-failed", authenticateToken, requireRole(["student"]
 app.get("/api/transactions/me", authenticateToken, requireRole(["student"]), paymentController.listMyTransactions);
 
 app.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie("connect.sid");
-    res.redirect("/login");
-  });
+  const userId = req.session?.user?.id || null;
+  const actorUserId = req.session?.user?.id || null;
+  logUserActivity({
+    userId,
+    actorUserId,
+    activityType: "logout",
+    ipAddress: req.ip,
+  })
+    .catch(() => null)
+    .finally(() => {
+      req.session.destroy(() => {
+        res.clearCookie("connect.sid");
+        res.redirect("/login");
+      });
+    });
 });
 
 app.post("/courses/:id/pay", authenticateToken, requireRole(["student"]), validators.validateCourseIdParam, async (req, res, next) => {
@@ -267,6 +294,9 @@ app.use((err, req, res, next) => {
 
 const port = process.env.PORT || 3000;
 const startServer = async () => {
+  await ensureAccountStatusColumns();
+  await ensurePasswordResetColumns();
+  await ensureUserActivityTable();
   await sessionStore.ensureTable();
   await ensurePaymentTables();
   await ensureSubscriptionTable();

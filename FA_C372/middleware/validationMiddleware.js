@@ -1,5 +1,6 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLE_OPTIONS = new Set(["student", "lecturer", "admin"]);
+const ACCOUNT_STATUS_OPTIONS = new Set(["active", "suspended"]);
 const PAYMENT_METHODS = new Set(["wallet", "paypal", "stripe", "nets"]);
 const MAX_CART_QTY = 20;
 
@@ -127,6 +128,23 @@ const validateTopUp = (req, res, next) => {
   next();
 };
 
+const validateAdminUserIdParam = (req, res, next) => {
+  const userId = asPositiveInt(req.params.id);
+  if (!userId) return res.redirect("/dashboard/admin?user=invalid");
+  req.validated = { ...(req.validated || {}), userId };
+  next();
+};
+
+const validateAdminStatusUpdate = (req, res, next) => {
+  const userId = asPositiveInt(req.params.id);
+  const accountStatus = asTrimmedString(req.body.account_status, 20).toLowerCase();
+  if (!userId || !ACCOUNT_STATUS_OPTIONS.has(accountStatus)) {
+    return res.redirect("/dashboard/admin?status_updated=invalid");
+  }
+  req.validated = { ...(req.validated || {}), userId, accountStatus };
+  next();
+};
+
 module.exports = {
   validateLogin,
   validateSignup,
@@ -138,6 +156,8 @@ module.exports = {
   validateCartQuantityUpdate,
   validateCheckout,
   validateAdminRoleUpdate,
+  validateAdminUserIdParam,
+  validateAdminStatusUpdate,
   validateTopUp,
   MAX_CART_QTY,
 };

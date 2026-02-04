@@ -11,6 +11,7 @@ const {
   updatePasswordByUserId,
 } = require("../models/userModel");
 const { sendVerificationEmail, sendPasswordResetEmail } = require("../services/emailService");
+const { logUserActivity } = require("../models/userActivityModel");
 
 const requireEmailVerification =
   (process.env.REQUIRE_EMAIL_VERIFICATION || "false").toLowerCase() === "true";
@@ -53,6 +54,9 @@ const login = async (req, res, next) => {
     if (!user) {
       return res.status(401).render("login", { error: "Invalid email or password.", info: null });
     }
+    if (String(user.account_status || "active").toLowerCase() === "suspended") {
+      return res.status(403).render("login", { error: "Your account is suspended. Please contact an administrator.", info: null });
+    }
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (requireEmailVerification && !user.email_verified) {
       return res
@@ -65,6 +69,12 @@ const login = async (req, res, next) => {
     req.session.user = { id: user.id, role: user.role, name: user.name };
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+    await logUserActivity({
+      userId: user.id,
+      actorUserId: user.id,
+      activityType: "login",
+      ipAddress: req.ip,
     });
     const role = (user.role || "").toLowerCase();
     if (role === "admin") return res.redirect("/dashboard/admin");

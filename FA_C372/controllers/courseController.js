@@ -16,6 +16,7 @@ const {
   ExternalCheckoutRequiredError,
 } = require("../models/paymentModel");
 const { getCartItemsForUser } = require("../models/cartModel");
+const { logUserActivity } = require("../models/userActivityModel");
 
 const listCourses = async (req, res, next) => {
   try {
@@ -184,6 +185,13 @@ const handleEnroll = async (req, res, next) => {
     const enrolled = await isStudentEnrolled(courseId, req.user.id);
     if (enrolled) return res.redirect("/courses?enroll_error=already_enrolled");
     await enrollStudentWithPayment(courseId, req.user.id, price, paymentMethod);
+    await logUserActivity({
+      userId: req.user.id,
+      actorUserId: req.user.id,
+      activityType: "course_enrolled",
+      ipAddress: req.ip,
+      details: { courseId: Number(courseId), courseName: course.course_name },
+    });
     return res.redirect("/courses?enrolled=1");
   } catch (err) {
     if (err instanceof WalletError) {
