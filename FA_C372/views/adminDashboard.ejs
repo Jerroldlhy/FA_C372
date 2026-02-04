@@ -58,6 +58,18 @@
           Course name and price are required.
         </div>
       <% } %>
+      <% if (status && status.role_updated === "1") { %>
+        <div class="alert alert-success">User role updated.</div>
+      <% } %>
+      <% if (status && status.role_updated === "invalid") { %>
+        <div class="alert alert-danger">Invalid role update request.</div>
+      <% } %>
+      <% if (status && status.role_updated === "not_found") { %>
+        <div class="alert alert-danger">User not found.</div>
+      <% } %>
+      <% if (status && status.role_updated === "self") { %>
+        <div class="alert alert-warning">You cannot change your own role.</div>
+      <% } %>
 
       <section class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
         <article class="stat-card col">
@@ -115,11 +127,18 @@
                         <td><%= user.name %></td>
                         <td class="text-break"><%= user.email %></td>
                         <td>
-                          <span
-                            class="status-badge <%= user.role === 'admin' ? 'status-badge-primary' : 'status-badge-neutral' %>"
-                          >
-                            <%= user.role %>
-                          </span>
+                          <form method="POST" action="/admin/users/<%= user.id %>/role" class="d-flex gap-2">
+                            <select class="form-select form-select-sm" name="role" <%= Number(currentUser?.id) === Number(user.id) ? "disabled" : "" %>>
+                              <option value="student" <%= user.role === "student" ? "selected" : "" %>>student</option>
+                              <option value="lecturer" <%= user.role === "lecturer" ? "selected" : "" %>>lecturer</option>
+                              <option value="admin" <%= user.role === "admin" ? "selected" : "" %>>admin</option>
+                            </select>
+                            <% if (Number(currentUser?.id) === Number(user.id)) { %>
+                              <button class="btn btn-sm btn-outline-secondary" type="button" disabled>Current</button>
+                            <% } else { %>
+                              <button class="btn btn-sm btn-outline-primary" type="submit">Update</button>
+                            <% } %>
+                          </form>
                         </td>
                       </tr>
                     <% }); %>

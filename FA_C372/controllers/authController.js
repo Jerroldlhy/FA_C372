@@ -6,8 +6,14 @@ const {
   updateVerificationToken,
   markEmailVerified,
   getUserByVerificationToken,
+  setPasswordResetToken,
+  getUserByPasswordResetToken,
+  updatePasswordByUserId,
 } = require("../models/userModel");
-const { sendVerificationEmail } = require("../services/emailService");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../services/emailService");
+
+const requireEmailVerification =
+  (process.env.REQUIRE_EMAIL_VERIFICATION || "false").toLowerCase() === "true";
 
 const showLogin = (req, res) => {
   res.render("login", { error: null, info: req.query });
@@ -15,6 +21,26 @@ const showLogin = (req, res) => {
 
 const showSignup = (req, res) => {
   res.render("signup", { error: null });
+};
+
+const showForgotPassword = (req, res) => {
+  res.render("forgotPassword", { error: null, info: req.query });
+};
+
+const showResetPassword = async (req, res, next) => {
+  try {
+    const token = (req.query.token || "").trim();
+    if (!token) {
+      return res.render("resetPassword", { error: "Invalid or missing reset token.", token: null });
+    }
+    const user = await getUserByPasswordResetToken(token);
+    if (!user || !user.password_reset_expires_at || new Date(user.password_reset_expires_at) < new Date()) {
+      return res.render("resetPassword", { error: "This reset link is invalid or expired.", token: null });
+    }
+    return res.render("resetPassword", { error: null, token });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 const login = async (req, res, next) => {
@@ -28,7 +54,7 @@ const login = async (req, res, next) => {
       return res.status(401).render("login", { error: "Invalid email or password.", info: null });
     }
     const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!user.email_verified) {
+    if (requireEmailVerification && !user.email_verified) {
       return res
         .status(403)
         .render("login", { error: "Please verify your email before logging in.", info: { pending_verification: true } });
@@ -61,10 +87,16 @@ const signup = async (req, res, next) => {
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const name = `${first_name} ${last_name}`.trim();
-    const verificationToken = crypto.randomBytes(24).toString("hex");
-    await createUser(name, email, passwordHash, "student", verificationToken);
-    await sendVerificationEmail(email, verificationToken, name);
-    return res.redirect("/login?sent_verify=1");
+    if (requireEmailVerification) {
+      const verificationToken = crypto.randomBytes(24).toString("hex");
+      await createUser(name, email, passwordHash, "student", verificationToken);
+      await sendVerificationEmail(email, verificationToken, name);
+      return res.redirect("/login?sent_verify=1");
+    }
+
+    const userId = await createUser(name, email, passwordHash, "student", null);
+    await markEmailVerified(userId);
+    return res.redirect("/login");
   } catch (err) {
     next(err);
   }
@@ -72,6 +104,7 @@ const signup = async (req, res, next) => {
 
 const resendVerification = async (req, res, next) => {
   try {
+    if (!requireEmailVerification) return res.redirect("/login");
     const email = (req.body.email || "").trim();
     if (!email) return res.redirect("/login?resend_error=missing");
     const user = await getUserByEmail(email);
@@ -88,6 +121,7 @@ const resendVerification = async (req, res, next) => {
 
 const verifyEmail = async (req, res, next) => {
   try {
+    if (!requireEmailVerification) return res.redirect("/login");
     const { token } = req.query;
     if (!token) return res.redirect("/login?verify_error=missing");
     const user = await getUserByVerificationToken(token);
@@ -100,6 +134,56 @@ const verifyEmail = async (req, res, next) => {
   }
 };
 
+const requestPasswordReset = async (req, res, next) => {
+  try {
+    const email = (req.body.email || "").trim();
+    if (!email) {
+      return res.status(400).render("forgotPassword", { error: "Email is required.", info: null });
+    }
+
+    const user = await getUserByEmail(email);
+    if (user) {
+      const token = crypto.randomBytes(24).toString("hex");
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+      await setPasswordResetToken(user.id, token, expiresAt);
+      await sendPasswordResetEmail(email, token, user.name);
+    }
+
+    return res.redirect("/forgot-password?sent=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const token = (req.body.token || "").trim();
+    const password = req.body.password || "";
+    const confirmPassword = req.body.confirm_password || "";
+
+    if (!token) {
+      return res.render("resetPassword", { error: "Invalid reset request.", token: null });
+    }
+    if (!password || password.length < 8) {
+      return res.render("resetPassword", { error: "Password must be at least 8 characters.", token });
+    }
+    if (password !== confirmPassword) {
+      return res.render("resetPassword", { error: "Passwords do not match.", token });
+    }
+
+    const user = await getUserByPasswordResetToken(token);
+    if (!user || !user.password_reset_expires_at || new Date(user.password_reset_expires_at) < new Date()) {
+      return res.render("resetPassword", { error: "This reset link is invalid or expired.", token: null });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await updatePasswordByUserId(user.id, passwordHash);
+    return res.redirect("/login?password_reset=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
 const googleRedirect = (req, res) => {
   res.redirect("/login?social_unavailable=1");
 };
@@ -107,9 +191,13 @@ const googleRedirect = (req, res) => {
 module.exports = {
   showLogin,
   showSignup,
+  showForgotPassword,
+  showResetPassword,
   login,
   signup,
   resendVerification,
   verifyEmail,
+  requestPasswordReset,
+  resetPassword,
   googleRedirect,
 };

@@ -427,8 +427,41 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES ('1S827l0STQoSyRtOaFjeNTbKcbyfExsL','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T17:16:24.422Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 01:16:24.568000','2026-02-03 15:16:24','2026-02-03 15:16:24'),('M19Kx1ip6lIueeRgPi2rXU3kPZSsFJwv','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T18:23:52.654Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 03:05:47.518000','2026-02-03 16:23:52','2026-02-03 17:05:47');
+INSERT INTO `sessions` VALUES ('1S827l0STQoSyRtOaFjeNTbKcbyfExsL','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T17:16:24.422Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 01:16:24.568000','2026-02-03 15:16:24','2026-02-03 15:16:24'),('M19Kx1ip6lIueeRgPi2rXU3kPZSsFJwv','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T18:23:52.654Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 03:15:28.313000','2026-02-03 16:23:52','2026-02-03 17:15:28');
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `subscriptions`
+--
+
+DROP TABLE IF EXISTS `subscriptions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `subscriptions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `plan_code` varchar(30) NOT NULL,
+  `plan_name` varchar(60) NOT NULL,
+  `monthly_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `status` enum('active','pending_contact','cancelled') NOT NULL DEFAULT 'active',
+  `starts_at` datetime NOT NULL,
+  `ends_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_subscription_user` (`user_id`),
+  CONSTRAINT `fk_subscription_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `subscriptions`
+--
+
+LOCK TABLES `subscriptions` WRITE;
+/*!40000 ALTER TABLE `subscriptions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `subscriptions` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -507,10 +540,13 @@ CREATE TABLE `users` (
   `role` enum('student','lecturer','admin') DEFAULT 'student',
   `email_verified` tinyint(1) DEFAULT '0',
   `verification_token` varchar(128) DEFAULT NULL,
+  `password_reset_token` varchar(128) DEFAULT NULL,
+  `password_reset_expires_at` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
-  KEY `verification_token` (`verification_token`)
+  KEY `verification_token` (`verification_token`),
+  KEY `password_reset_token` (`password_reset_token`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -522,39 +558,6 @@ LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
 INSERT INTO `users` VALUES (1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,'2026-02-03 09:47:19'),(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,'2026-02-03 09:47:19');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `subscriptions`
---
-
-DROP TABLE IF EXISTS `subscriptions`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `subscriptions` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `plan_code` varchar(30) NOT NULL,
-  `plan_name` varchar(60) NOT NULL,
-  `monthly_price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `status` enum('active','pending_contact','cancelled') NOT NULL DEFAULT 'active',
-  `starts_at` datetime NOT NULL,
-  `ends_at` datetime DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_subscription_user` (`user_id`),
-  CONSTRAINT `fk_subscription_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `subscriptions`
---
-
-LOCK TABLES `subscriptions` WRITE;
-/*!40000 ALTER TABLE `subscriptions` DISABLE KEYS */;
-/*!40000 ALTER TABLE `subscriptions` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -609,4 +612,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-04  1:08:01
+-- Dump completed on 2026-02-04 11:21:30

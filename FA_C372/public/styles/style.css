@@ -775,11 +775,20 @@ img {
   position: relative;
 }
 
-.eye-icon {
+.eye-toggle {
   position: absolute;
-  right: 14px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.eye-icon {
+  position: relative;
+  display: block;
   width: 18px;
   height: 10px;
   border: 2px solid #a5a9b6;
@@ -796,6 +805,34 @@ img {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.eye-toggle.is-visible .eye-icon::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  height: 2px;
+  background: #a5a9b6;
+  transform: rotate(-20deg);
+}
+
+.auth-form-links {
+  margin-top: -6px;
+  margin-bottom: 2px;
+  text-align: right;
+}
+
+.auth-form-links a {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-form-links a:hover {
+  text-decoration: underline;
 }
 
 .auth-form small {
@@ -1283,6 +1320,22 @@ img {
   border-radius: var(--radius-md);
 }
 
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-controls .btn {
+  min-width: 2rem;
+}
+
+.qty-value {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 700;
+}
+
 .student-dashboard {
   background: #f6f7fb;
 }
@@ -1753,5 +1806,40 @@ img {
 
   .auth-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cart-table thead {
+    display: none;
+  }
+
+  .cart-table tbody,
+  .cart-table tr,
+  .cart-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .cart-table tr {
+    border: 1px solid #eceef6;
+    border-radius: 14px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: #fff;
+  }
+
+  .cart-table td {
+    border: 0;
+    padding: 0.45rem 0;
+    text-align: left !important;
+  }
+
+  .cart-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #7b7f90;
+    margin-bottom: 0.1rem;
   }
 }

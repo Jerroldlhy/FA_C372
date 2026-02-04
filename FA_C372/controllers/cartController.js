@@ -2,6 +2,7 @@ const { getCourseById } = require("../models/courseModel");
 const {
   addItemToCart,
   removeItemFromCart,
+  updateItemQuantity,
   getCartItemsForUser,
 } = require("../models/cartModel");
 const { isStudentEnrolled } = require("../models/enrollmentModel");
@@ -27,7 +28,7 @@ const showCart = async (req, res, next) => {
 
 const addCourseToCart = async (req, res, next) => {
   try {
-    const courseId = Number(req.params.id);
+    const courseId = req.validated?.courseId || Number(req.params.id);
     const redirectToRaw = String(req.query.redirect_to || req.body?.redirect_to || "").trim();
     const redirectTo = redirectToRaw.startsWith("/") ? redirectToRaw : null;
     const redirectWithStatus = (statusKey, statusValue) => {
@@ -53,7 +54,7 @@ const addCourseToCart = async (req, res, next) => {
 
 const removeCourseFromCart = async (req, res, next) => {
   try {
-    const courseId = Number(req.params.id);
+    const courseId = req.validated?.courseId || Number(req.params.id);
     await removeItemFromCart(req.user.id, courseId);
     res.redirect("/cart?removed=1");
   } catch (err) {
@@ -61,8 +62,21 @@ const removeCourseFromCart = async (req, res, next) => {
   }
 };
 
+const updateCourseQuantityInCart = async (req, res, next) => {
+  try {
+    const courseId = req.validated?.courseId || Number(req.params.id);
+    const quantity = req.validated?.quantity || Number(req.body.quantity);
+    const updated = await updateItemQuantity(req.user.id, courseId, quantity);
+    if (!updated) return res.redirect("/cart?qty_error=item_missing");
+    return res.redirect("/cart?qty_updated=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   showCart,
   addCourseToCart,
   removeCourseFromCart,
+  updateCourseQuantityInCart,
 };

@@ -2,7 +2,7 @@ const { getWalletBalance, addWalletBalance } = require("../models/walletModel");
 const { getTransactionsForUser, createTransaction, getAllTransactions } = require("../models/transactionModel");
 const { getEnrollmentsByStudent, getEnrollmentsForLecturer, getDistinctStudentCount } = require("../models/enrollmentModel");
 const { getCoursesByInstructor, getCoursesWithStats } = require("../models/courseModel");
-const { getAllUsers } = require("../models/userModel");
+const { getAllUsers, getUserById, updateUserRole } = require("../models/userModel");
 
 const studentDashboard = async (req, res, next) => {
   try {
@@ -39,6 +39,27 @@ const adminDashboard = async (req, res, next) => {
   }
 };
 
+const updateRole = async (req, res, next) => {
+  try {
+    const userId = req.validated?.userId || Number(req.params.id);
+    const role = req.validated?.role || String(req.body.role || "").toLowerCase();
+
+    const targetUser = await getUserById(userId);
+    if (!targetUser) {
+      return res.redirect("/dashboard/admin?role_updated=not_found");
+    }
+
+    if (Number(req.user.id) === userId) {
+      return res.redirect("/dashboard/admin?role_updated=self");
+    }
+
+    await updateUserRole(userId, role);
+    return res.redirect("/dashboard/admin?role_updated=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
 const walletPage = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -69,6 +90,7 @@ module.exports = {
   studentDashboard,
   lecturerDashboard,
   adminDashboard,
+  updateRole,
   walletPage,
   topUpWallet,
 };

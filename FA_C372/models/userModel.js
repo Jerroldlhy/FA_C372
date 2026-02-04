@@ -1,9 +1,29 @@
 const pool = require("./db");
 
+const ensurePasswordResetColumns = async () => {
+  await pool.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(128) NULL"
+  );
+  await pool.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at DATETIME NULL"
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token)"
+  );
+};
+
 const getUserByEmail = async (email) => {
   const [rows] = await pool.query(
     "SELECT id, name, email, password_hash, role, email_verified FROM users WHERE email = ? LIMIT 1",
     [email]
+  );
+  return rows[0] || null;
+};
+
+const getUserById = async (userId) => {
+  const [rows] = await pool.query(
+    "SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1",
+    [userId]
   );
   return rows[0] || null;
 };
@@ -38,6 +58,33 @@ const getUserByVerificationToken = async (token) => {
   return rows[0] || null;
 };
 
+const setPasswordResetToken = async (userId, token, expiresAt) => {
+  await pool.query(
+    "UPDATE users SET password_reset_token = ?, password_reset_expires_at = ? WHERE id = ?",
+    [token, expiresAt, userId]
+  );
+};
+
+const getUserByPasswordResetToken = async (token) => {
+  const [rows] = await pool.query(
+    `SELECT id, email, password_reset_expires_at
+     FROM users
+     WHERE password_reset_token = ?
+     LIMIT 1`,
+    [token]
+  );
+  return rows[0] || null;
+};
+
+const updatePasswordByUserId = async (userId, passwordHash) => {
+  await pool.query(
+    `UPDATE users
+     SET password_hash = ?, password_reset_token = NULL, password_reset_expires_at = NULL
+     WHERE id = ?`,
+    [passwordHash, userId]
+  );
+};
+
 const getAllUsers = async () => {
   const [rows] = await pool.query(
     "SELECT id, name, email, role FROM users ORDER BY role, name"
@@ -61,13 +108,26 @@ const isLecturerId = async (id) => {
   return rows.length > 0;
 };
 
+const updateUserRole = async (userId, role) => {
+  await pool.query(
+    "UPDATE users SET role = ? WHERE id = ?",
+    [role, userId]
+  );
+};
+
 module.exports = {
+  ensurePasswordResetColumns,
+  getUserById,
   getUserByEmail,
   createUser,
   updateVerificationToken,
   markEmailVerified,
   getUserByVerificationToken,
+  setPasswordResetToken,
+  getUserByPasswordResetToken,
+  updatePasswordByUserId,
   getAllUsers,
   getLecturers,
   isLecturerId,
+  updateUserRole,
 };

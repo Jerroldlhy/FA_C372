@@ -22,6 +22,7 @@ const dashboardController = require("./controllers/dashboardController");
 const pageController = require("./controllers/pageController");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
+const validators = require("./middleware/validationMiddleware");
 
 const sessionTtlHours = Number(process.env.SESSION_TTL_HOURS || 2);
 const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || "dev_secret_change_me";
@@ -84,36 +85,43 @@ app.post(
   "/courses",
   authenticateToken,
   requireRole(["lecturer", "admin"]),
+  validators.validateCourseCreate,
   courseController.handleCreateCourse
 );
 app.post(
   "/courses/:id/update",
   authenticateToken,
   requireRole(["lecturer", "admin"]),
+  validators.validateCourseIdParam,
+  validators.validateCourseUpdate,
   courseController.handleUpdateCourse
 );
 app.post(
   "/courses/:id/delete",
   authenticateToken,
   requireRole(["lecturer", "admin"]),
+  validators.validateCourseIdParam,
   courseController.handleDeleteCourse
 );
 app.post(
   "/courses/:id/review",
   authenticateToken,
   requireRole(["student"]),
+  validators.validateCourseIdParam,
   courseController.handleReview
 );
 app.post(
   "/courses/:id/enroll",
   authenticateToken,
   requireRole(["student"]),
+  validators.validateCourseIdParam,
   courseController.handleEnroll
 );
 app.post(
   "/courses/:id/cart",
   authenticateToken,
   requireRole(["student"]),
+  validators.validateCourseIdParam,
   cartController.addCourseToCart
 );
 app.get("/mentors", pageController.mentors);
@@ -122,12 +130,16 @@ app.post("/plans/subscribe", authenticateToken, requireRole(["student"]), pageCo
 app.get("/login", authController.showLogin);
 app.get("/auth/google", authController.googleRedirect);
 app.get("/signup", authController.showSignup);
-app.post("/login", authController.login);
-app.post("/signup", authController.signup);
+app.get("/forgot-password", authController.showForgotPassword);
+app.get("/reset-password", authController.showResetPassword);
+app.post("/login", validators.validateLogin, authController.login);
+app.post("/signup", validators.validateSignup, authController.signup);
 app.post("/resend-verification", authController.resendVerification);
 app.get("/verify-email", authController.verifyEmail);
+app.post("/forgot-password", validators.validateForgotPassword, authController.requestPasswordReset);
+app.post("/reset-password", validators.validateResetPassword, authController.resetPassword);
 
-app.get("/dashboard/student", authenticateToken, dashboardController.studentDashboard);
+app.get("/dashboard/student", authenticateToken, requireRole(["student"]), dashboardController.studentDashboard);
 app.get(
   "/dashboard/lecturer",
   authenticateToken,
@@ -153,31 +165,50 @@ app.post(
   "/admin/courses",
   authenticateToken,
   requireAdmin,
+  validators.validateCourseCreate,
   courseController.handleCreateCourse
 );
 app.post(
   "/admin/courses/:id/update",
   authenticateToken,
   requireAdmin,
+  validators.validateCourseIdParam,
+  validators.validateCourseUpdate,
   courseController.handleUpdateCourse
 );
 app.post(
   "/admin/courses/:id/delete",
   authenticateToken,
   requireAdmin,
+  validators.validateCourseIdParam,
   courseController.handleDeleteCourse
 );
+app.post(
+  "/admin/users/:id/role",
+  authenticateToken,
+  requireAdmin,
+  validators.validateAdminRoleUpdate,
+  dashboardController.updateRole
+);
 
-app.post("/wallet/topup", authenticateToken, dashboardController.topUpWallet);
+app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
 app.get("/wallet", authenticateToken, requireRole(["student"]), dashboardController.walletPage);
 app.get("/cart", authenticateToken, requireRole(["student"]), cartController.showCart);
 app.post(
   "/cart/:id/remove",
   authenticateToken,
   requireRole(["student"]),
+  validators.validateCourseIdParam,
   cartController.removeCourseFromCart
 );
-app.post("/checkout", authenticateToken, requireRole(["student"]), orderController.checkout);
+app.post(
+  "/cart/:id/quantity",
+  authenticateToken,
+  requireRole(["student"]),
+  validators.validateCartQuantityUpdate,
+  cartController.updateCourseQuantityInCart
+);
+app.post("/checkout", authenticateToken, requireRole(["student"]), validators.validateCheckout, orderController.checkout);
 app.get("/orders", authenticateToken, requireRole(["student"]), orderController.listMyOrders);
 app.get(
   "/orders/:id",
@@ -214,7 +245,7 @@ app.post("/logout", (req, res) => {
   });
 });
 
-app.post("/courses/:id/pay", async (req, res, next) => {
+app.post("/courses/:id/pay", authenticateToken, requireRole(["student"]), validators.validateCourseIdParam, async (req, res, next) => {
   try {
     const paymentMethod = req.body.payment_method || "paypal";
     res.redirect(

@@ -76,6 +76,11 @@
             Social login is not wired up yet. Use your email/password instead.
           </div>
         <% } %>
+        <% if (info?.password_reset) { %>
+          <div class="auth-alert auth-alert-success">
+            Password reset successful. You can now log in.
+          </div>
+        <% } %>
 
         <form method="POST" action="/login" class="auth-form" novalidate>
           <label>
@@ -92,13 +97,24 @@
             <div class="password-field">
               <input
                 type="password"
+                id="login-password"
                 name="password"
                 placeholder="Enter your password"
                 required
               />
-              <span class="eye-icon"></span>
+              <button
+                type="button"
+                class="eye-toggle"
+                data-password-toggle="login-password"
+                aria-label="Show password"
+              >
+                <span class="eye-icon"></span>
+              </button>
             </div>
           </label>
+          <div class="auth-form-links">
+            <a href="/forgot-password">Forgot password?</a>
+          </div>
           <button type="submit" class="btn btn-primary auth-submit">
             Log In
           </button>
@@ -132,5 +148,6 @@
         </p>
       </section>
     </main>
+    <script src="/scripts/main.js"></script>
   </body>
 </html>

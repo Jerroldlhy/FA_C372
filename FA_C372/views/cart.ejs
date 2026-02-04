@@ -32,6 +32,18 @@
         <% if (status?.removed) { %>
           <div class="alert alert-info">Item removed from cart.</div>
         <% } %>
+        <% if (status?.qty_updated) { %>
+          <div class="alert alert-success">Cart quantity updated.</div>
+        <% } %>
+        <% if (status?.qty_error === "invalid_course") { %>
+          <div class="alert alert-danger">Invalid course item.</div>
+        <% } %>
+        <% if (status?.qty_error === "invalid_quantity") { %>
+          <div class="alert alert-danger">Quantity must be between 1 and 20.</div>
+        <% } %>
+        <% if (status?.qty_error === "item_missing") { %>
+          <div class="alert alert-warning">Item no longer exists in your cart.</div>
+        <% } %>
         <% if (status?.checkout_error === "wallet_balance") { %>
           <div class="alert alert-danger">Insufficient wallet balance for checkout.</div>
         <% } %>
@@ -47,6 +59,9 @@
         <% if (status?.checkout_error === "payment_required") { %>
           <div class="alert alert-warning">Complete your external payment first, then place order.</div>
         <% } %>
+        <% if (status?.checkout_error === "invalid_payment_method") { %>
+          <div class="alert alert-danger">Invalid payment method selected.</div>
+        <% } %>
         <% if (status?.payment_ready) { %>
           <div class="alert alert-success text-capitalize"><%= status.payment_ready %> payment verified. You can place the order now.</div>
         <% } %>
@@ -56,30 +71,47 @@
 
         <div class="dashboard-panel">
           <% if (!items.length) { %>
-            <div class="empty-state">No items in cart yet. Browse courses to add one.</div>
+            <div class="empty-state">
+              <p class="mb-2">No items in cart yet.</p>
+              <a href="/courses" class="btn btn-outline btn-sm">Browse courses</a>
+            </div>
           <% } else { %>
             <div class="table-responsive">
-              <table class="table align-middle mb-4">
+              <table class="table align-middle mb-4 cart-table">
                 <thead>
                   <tr>
                     <th>Course</th>
                     <th>Category</th>
                     <th>Price</th>
+                    <th>Quantity</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   <% items.forEach(function(item) { %>
                     <tr>
-                      <td>
+                      <td data-label="Course">
                         <strong><%= item.course_name %></strong>
                         <div class="text-muted small">
-                          <%= item.level || "General" %> · <%= item.language || "N/A" %>
+                          <%= item.level || "General" %> - <%= item.language || "N/A" %>
                         </div>
                       </td>
-                      <td><%= item.category || "General" %></td>
-                      <td>$<%= Number(item.price || 0).toFixed(2) %></td>
-                      <td class="text-end">
+                      <td data-label="Category"><%= item.category || "General" %></td>
+                      <td data-label="Price">$<%= Number(item.price || 0).toFixed(2) %></td>
+                      <td data-label="Quantity">
+                        <div class="qty-controls">
+                          <form method="POST" action="/cart/<%= item.course_id %>/quantity" class="m-0">
+                            <input type="hidden" name="quantity" value="<%= Math.max(1, Number(item.quantity || 1) - 1) %>" />
+                            <button class="btn btn-sm btn-outline-secondary" type="submit" <%= Number(item.quantity || 1) <= 1 ? "disabled" : "" %>>-</button>
+                          </form>
+                          <span class="qty-value"><%= Number(item.quantity || 1) %></span>
+                          <form method="POST" action="/cart/<%= item.course_id %>/quantity" class="m-0">
+                            <input type="hidden" name="quantity" value="<%= Number(item.quantity || 1) + 1 %>" />
+                            <button class="btn btn-sm btn-outline-secondary" type="submit" <%= Number(item.quantity || 1) >= 20 ? "disabled" : "" %>>+</button>
+                          </form>
+                        </div>
+                      </td>
+                      <td class="text-end" data-label="Actions">
                         <form method="POST" action="/cart/<%= item.course_id %>/remove">
                           <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
                         </form>
@@ -89,6 +121,7 @@
                 </tbody>
               </table>
             </div>
+
             <div class="dashboard-panel mb-3">
               <h5 class="mb-2">Payment Methods</h5>
               <p class="text-muted small mb-3">
@@ -147,7 +180,7 @@
             </div>
 
             <form class="row g-2" method="POST" action="/checkout">
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-md-4" id="checkoutMethodField">
                 <label class="form-label small" for="payment_method">Payment method</label>
                 <select class="form-select" id="payment_method" name="payment_method">
                   <option value="wallet">Wallet</option>
@@ -169,6 +202,7 @@
         </div>
       </div>
     </main>
+
     <script>
       async function postJson(url, body) {
         const res = await fetch(url, {
@@ -187,6 +221,9 @@
       const paypalOrderId = document.getElementById("paypalOrderId");
       const methodSelect = document.getElementById("payment_method");
       const methodButtons = document.querySelectorAll("[data-method]");
+      const checkoutMethodField = document.getElementById("checkoutMethodField");
+      const paymentNotice = document.createElement("div");
+      paymentNotice.className = "text-muted small mt-2";
       const actionSections = {
         wallet: document.getElementById("actionWallet"),
         paypal: document.getElementById("actionPaypal"),
@@ -207,11 +244,20 @@
           btn.classList.toggle("btn-primary", active);
           btn.classList.toggle("btn-outline", !active);
         });
+
+        if (checkoutMethodField && !paymentNotice.isConnected) {
+          checkoutMethodField.appendChild(paymentNotice);
+        }
+        paymentNotice.textContent =
+          method === "wallet"
+            ? "Wallet will be charged when you place order."
+            : "Complete payment verification first, then place order.";
       }
 
       methodButtons.forEach((btn) => {
         btn.addEventListener("click", () => showAction(btn.getAttribute("data-method")));
       });
+
       if (methodSelect) {
         methodSelect.addEventListener("change", (e) => showAction(e.target.value));
         showAction(methodSelect.value || "wallet");
@@ -232,7 +278,7 @@
       if (btnPaypalCapture) {
         btnPaypalCapture.addEventListener("click", async () => {
           try {
-            const orderId = (paypalOrderId && paypalOrderId.value || "").trim();
+            const orderId = ((paypalOrderId && paypalOrderId.value) || "").trim();
             if (!orderId) {
               alert("Enter a PayPal order ID first.");
               return;

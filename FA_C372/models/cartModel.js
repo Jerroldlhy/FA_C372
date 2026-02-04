@@ -35,6 +35,21 @@ const removeItemFromCart = async (userId, courseId) => {
   ]);
 };
 
+const updateItemQuantity = async (userId, courseId, quantity) => {
+  const [rows] = await pool.query(
+    "SELECT id FROM carts WHERE user_id = ? LIMIT 1",
+    [userId]
+  );
+  const cartId = rows[0]?.id;
+  if (!cartId) return false;
+
+  const [result] = await pool.query(
+    "UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND course_id = ?",
+    [quantity, cartId, courseId]
+  );
+  return result.affectedRows > 0;
+};
+
 const getCartItemsForUser = async (userId) => {
   const [rows] = await pool.query(
     `SELECT ci.id, ci.course_id, ci.quantity,
@@ -65,6 +80,7 @@ module.exports = {
   getOrCreateCartId,
   addItemToCart,
   removeItemFromCart,
+  updateItemQuantity,
   getCartItemsForUser,
   clearCartByUser,
 };

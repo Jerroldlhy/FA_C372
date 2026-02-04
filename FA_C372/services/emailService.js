@@ -44,6 +44,31 @@ const sendVerificationEmail = async (email, token, name) => {
   }
 };
 
+const sendPasswordResetEmail = async (email, token, name) => {
+  if (!transporter) {
+    console.warn("SMTP transporter not configured; skipping password reset email.");
+    return;
+  }
+  const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: email,
+      subject: "Reset your EduSphere password",
+      html: `
+        <p>Hi ${name || "Learner"},</p>
+        <p>We received a request to reset your password.</p>
+        <p><a href="${resetUrl}">Reset password</a></p>
+        <p>This link expires in 30 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      `,
+    });
+  } catch (mailErr) {
+    console.error("Failed to send password reset email:", mailErr);
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
+  sendPasswordResetEmail,
 };
