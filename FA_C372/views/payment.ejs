@@ -11,6 +11,25 @@
       crossorigin="anonymous"
     />
     <link rel="stylesheet" href="/styles/style.css" />
+    <style>
+      .stripe-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+      }
+
+      .stripe-btn-logo {
+        height: 18px;
+        width: auto;
+        filter: brightness(0) invert(1) contrast(1.15);
+      }
+
+      .stripe-btn-word {
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+    </style>
   </head>
   <body class="course-page">
     <%- include("partials/navbar") %>
@@ -74,7 +93,15 @@
                   <div class="card-body">
                     <h5 class="card-title">Stripe checkout</h5>
                     <p class="card-text text-muted">Pay with card via Stripe secure checkout.</p>
-                    <button class="btn btn-dark w-100" type="button" id="stripe-checkout-btn">Pay with Stripe</button>
+                    <button class="btn btn-dark w-100 stripe-btn" type="button" id="stripe-checkout-btn">
+                      <span id="stripe-btn-label">Pay with</span>
+                      <img
+                        class="stripe-btn-logo"
+                        src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/stripe.svg"
+                        alt="Stripe"
+                      />
+                      <span class="stripe-btn-word">Stripe</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -122,6 +149,7 @@
       (function () {
         var msg = document.getElementById("paypal-msg");
         var stripeButton = document.getElementById("stripe-checkout-btn");
+        var stripeButtonLabel = document.getElementById("stripe-btn-label");
         var paymentInProgress = false;
 
         function setPaymentInProgress(active) {
@@ -133,7 +161,9 @@
           }
           if (stripeButton) {
             stripeButton.disabled = active;
-            stripeButton.textContent = active ? "Processing..." : "Pay with Stripe";
+            if (stripeButtonLabel) {
+              stripeButtonLabel.textContent = active ? "Processing..." : "Pay with";
+            }
           }
         }
 

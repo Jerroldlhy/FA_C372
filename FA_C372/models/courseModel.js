@@ -50,7 +50,10 @@ const getCoursesWithStats = async (filters = {}) => {
     params.push(maxPrice);
   }
 
-  where.push("(c.is_active = 1 OR c.is_active IS NULL)");
+  const includeInactive = ["1", "true", "on"].includes(String(filters.includeInactive || "").toLowerCase());
+  if (!includeInactive) {
+    where.push("(c.is_active = 1 OR c.is_active IS NULL)");
+  }
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const [courses] = await pool.query(
@@ -72,14 +75,16 @@ const getCoursesWithStats = async (filters = {}) => {
   return courses;
 };
 
-const getCourseFilterOptions = async () => {
+const getCourseFilterOptions = async (options = {}) => {
+  const includeInactive = ["1", "true", "on"].includes(String(options.includeInactive || "").toLowerCase());
+  const activeOnlyWhere = includeInactive ? "" : "WHERE is_active = 1 OR is_active IS NULL";
   const [rows] = await pool.query(
     `SELECT DISTINCT
        NULLIF(TRIM(category), '') AS category,
        NULLIF(TRIM(level), '') AS level,
        NULLIF(TRIM(language), '') AS language
      FROM courses
-     WHERE is_active = 1 OR is_active IS NULL`
+     ${activeOnlyWhere}`
   );
 
   const categories = new Set();

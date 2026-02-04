@@ -17,25 +17,52 @@
       crossorigin="anonymous"
     />
     <link rel="stylesheet" href="/styles/style.css" />
+    <style>
+      .courses-hero {
+        border: 1px solid #e8eaf8;
+        border-radius: 20px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f2f6ff 60%, #fff5f7 100%);
+      }
+      .courses-filter-panel {
+        border-radius: 18px;
+        border: 1px solid #e8eaf8;
+        background: #ffffff;
+      }
+      .course-list .course-card {
+        border: 1px solid #e6e9f7;
+        border-radius: 18px;
+        box-shadow: 0 14px 24px rgba(18, 31, 76, 0.08);
+      }
+      .course-list .course-card:hover {
+        transform: translateY(-3px);
+      }
+      .course-visibility-note {
+        color: #55607a;
+        font-size: 0.9rem;
+      }
+      .course-empty {
+        display: none;
+        border: 1px dashed #cfd8ef;
+        border-radius: 14px;
+        padding: 1rem;
+        text-align: center;
+        color: #34405d;
+        background: #fafcff;
+      }
+    </style>
   </head>
   <body>
     <%- include("partials/navbar") %>
     <main class="section course-page">
       <div class="container">
-        <div class="course-hero mb-4">
+        <div class="course-hero courses-hero mb-4">
           <div>
             <p class="eyebrow text-uppercase text-muted mb-2">Course Hub</p>
             <h1 class="display-5 fw-bold mb-2">Browse and manage every course</h1>
             <p class="lead text-muted">
-              View the catalog, manage your own lessons, enroll with a digital
-              wallet, and share ratings with the community.
-            </p>
-          </div>
-          <div class="course-hero-card">
-            <p class="text-muted small mb-1">Total listings</p>
-            <strong class="display-6 mb-0"><%= courses.length %></strong>
-            <p class="text-muted small mb-0">
-              Rated lessons: <%= courses.filter((c) => c.review_count > 0).length %>
+              Explore all available courses, then narrow down by topic, level,
+              language, or price in one place.
             </p>
           </div>
         </div>
@@ -53,10 +80,10 @@
           <div class="alert alert-danger">Name and price are required.</div>
         <% } %>
         <% if (status?.enrolled) { %>
-          <div class="alert alert-success">Enrolled! Check “My Dashboard” for progress.</div>
+          <div class="alert alert-success">Enrolled! Check "My Dashboard" for progress.</div>
         <% } %>
         <% if (status?.enroll_error === "wallet_balance") { %>
-          <div class="alert alert-danger">Top up your wallet – balance is insufficient.</div>
+          <div class="alert alert-danger">Top up your wallet - balance is insufficient.</div>
         <% } %>
         <% if (status?.enroll_error === "already_enrolled") { %>
           <div class="alert alert-info">You are already enrolled in this course.</div>
@@ -85,9 +112,9 @@
           <div class="alert alert-danger">Could not add item to cart.</div>
         <% } %>
 
-        <div class="dashboard-panel card mb-4">
+        <div class="dashboard-panel card courses-filter-panel mb-4">
           <div class="card-body">
-            <form class="row g-2 align-items-end" method="GET" action="/courses">
+            <form class="row g-2 align-items-end" id="courseFilterForm" autocomplete="off">
               <div class="col-12 col-md-3">
                 <label class="form-label small" for="q">Search</label>
                 <input class="form-control form-control-sm" id="q" name="q" value="<%= filters?.q || '' %>" placeholder="Course name or keyword" />
@@ -127,16 +154,20 @@
                 <label class="form-label small" for="maxPrice">Max</label>
                 <input class="form-control form-control-sm" id="maxPrice" name="max_price" type="number" min="0" step="0.01" value="<%= filters?.maxPrice || '' %>" />
               </div>
-              <div class="col-12 col-md-1 d-grid">
-                <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+              <div class="col-6 col-md-1 d-grid">
+                <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+              </div>
+              <div class="col-6 col-md-1 d-grid">
+                <button class="btn btn-sm btn-outline-secondary" id="clearFilters" type="button">Clear</button>
               </div>
             </form>
+            <p class="course-visibility-note mt-2 mb-0" id="courseVisibilityText"></p>
           </div>
         </div>
 
         <div class="row g-4">
           <div class="col-12 col-lg-8">
-            <div class="course-list">
+            <div class="course-list" id="courseList">
               <% courses.forEach(function (course) { %>
                 <% const isOwnCourse = currentUser && course.instructor_id === currentUser.id; %>
                 <% const isLecturer = currentUser && currentUser.role === "lecturer"; %>
@@ -145,7 +176,15 @@
                 <% const enrolled = enrolledCourseIds.includes(course.id); %>
                 <% const inCart = cartCourseIds.includes(course.id); %>
                 <% const topReview = reviewsMap[course.id] && reviewsMap[course.id][0]; %>
-                <article class="course-card">
+                <article
+                  class="course-card"
+                  data-course-name="<%= String(course.course_name || '').toLowerCase() %>"
+                  data-course-description="<%= String(course.description || '').toLowerCase() %>"
+                  data-category="<%= String(course.category || 'General').toLowerCase() %>"
+                  data-level="<%= String(course.level || '').toLowerCase() %>"
+                  data-language="<%= String(course.language || '').toLowerCase() %>"
+                  data-price="<%= Number(course.price || 0) %>"
+                >
                   <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                       <p class="text-muted small mb-1">
@@ -160,7 +199,7 @@
                       <strong>$<%= Number(course.price).toFixed(2) %></strong>
                       <p class="text-muted small mb-0">
                         Rating:
-                        <%= Number(course.avg_rating || 0).toFixed(1) %>★
+                        <%= Number(course.avg_rating || 0).toFixed(1) %>/5
                         (<%= course.review_count %>)
                       </p>
                     </div>
@@ -171,8 +210,8 @@
                   <% if (topReview && topReview.review) { %>
                     <div class="review-snippet mb-3">
                       <strong><%= topReview.student_name %></strong>
-                      <span class="text-muted small mx-2">·</span>
-                      <span class="text-muted small"><%= topReview.rating %>★</span>
+                      <span class="text-muted small mx-2">|</span>
+                      <span class="text-muted small"><%= topReview.rating %>/5</span>
                       <p class="text-muted small mb-0">
                         <%= topReview.review %>
                       </p>
@@ -338,6 +377,9 @@
                 </article>
               <% }); %>
             </div>
+            <div class="course-empty mt-3" id="courseEmptyState">
+              No courses match your current filters.
+            </div>
           </div>
 
           <div class="col-12 col-lg-4">
@@ -436,5 +478,83 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script>
+      (function () {
+        const form = document.getElementById("courseFilterForm");
+        const clearBtn = document.getElementById("clearFilters");
+        const cards = Array.from(document.querySelectorAll("#courseList .course-card"));
+        const emptyState = document.getElementById("courseEmptyState");
+        const visibilityText = document.getElementById("courseVisibilityText");
+        if (!form) return;
+        if (!cards.length) {
+          if (emptyState) emptyState.style.display = "block";
+          if (visibilityText) visibilityText.textContent = "Showing 0 of 0 courses";
+          return;
+        }
+
+        const q = document.getElementById("q");
+        const category = document.getElementById("categoryFilter");
+        const level = document.getElementById("levelFilter");
+        const language = document.getElementById("languageFilter");
+        const min = document.getElementById("minPrice");
+        const max = document.getElementById("maxPrice");
+
+        const applyFilters = () => {
+          const qValue = String(q.value || "").trim().toLowerCase();
+          const categoryValue = String(category.value || "").trim().toLowerCase();
+          const levelValue = String(level.value || "").trim().toLowerCase();
+          const languageValue = String(language.value || "").trim().toLowerCase();
+          const minValue = min.value === "" ? null : Number(min.value);
+          const maxValue = max.value === "" ? null : Number(max.value);
+          let visibleCount = 0;
+
+          cards.forEach((card) => {
+            const name = card.getAttribute("data-course-name") || "";
+            const description = card.getAttribute("data-course-description") || "";
+            const cardCategory = card.getAttribute("data-category") || "";
+            const cardLevel = card.getAttribute("data-level") || "";
+            const cardLanguage = card.getAttribute("data-language") || "";
+            const price = Number(card.getAttribute("data-price") || 0);
+
+            const matchesQuery = !qValue || name.includes(qValue) || description.includes(qValue);
+            const matchesCategory = !categoryValue || cardCategory === categoryValue;
+            const matchesLevel = !levelValue || cardLevel === levelValue;
+            const matchesLanguage = !languageValue || cardLanguage === languageValue;
+            const matchesMin = minValue === null || (!Number.isNaN(minValue) && price >= minValue);
+            const matchesMax = maxValue === null || (!Number.isNaN(maxValue) && price <= maxValue);
+
+            const show = matchesQuery && matchesCategory && matchesLevel && matchesLanguage && matchesMin && matchesMax;
+            card.style.display = show ? "" : "none";
+            if (show) visibleCount += 1;
+          });
+
+          emptyState.style.display = visibleCount ? "none" : "block";
+          visibilityText.textContent = "Showing " + visibleCount + " of " + cards.length + " courses";
+        };
+
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          applyFilters();
+        });
+
+        [q, category, level, language, min, max].forEach((el) => {
+          el.addEventListener("input", applyFilters);
+          el.addEventListener("change", applyFilters);
+        });
+
+        clearBtn.addEventListener("click", function () {
+          q.value = "";
+          category.value = "";
+          level.value = "";
+          language.value = "";
+          min.value = "";
+          max.value = "";
+          applyFilters();
+        });
+
+        applyFilters();
+      })();
+    </script>
   </body>
 </html>
+

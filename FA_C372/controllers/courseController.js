@@ -29,8 +29,8 @@ const listCourses = async (req, res, next) => {
       maxPrice: req.query.max_price || "",
     };
 
-    const courses = await getCoursesWithStats(filters);
-    const filterOptions = await getCourseFilterOptions();
+    const courses = await getCoursesWithStats({ ...filters, includeInactive: true });
+    const filterOptions = await getCourseFilterOptions({ includeInactive: true });
     const courseIds = courses.map((c) => c.id);
     const reviewsMap = {};
     if (courseIds.length) {

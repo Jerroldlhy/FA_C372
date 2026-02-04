@@ -1,9 +1,9 @@
 <header class="site-header">
   <div class="container header-inner">
-    <div class="brand">
+    <a class="brand" href="/">
       <span class="brand-dot"></span>
       <span>EduSphere</span>
-    </div>
+    </a>
     <% 
       const safeRole = currentUser?.role ? String(currentUser.role).toLowerCase() : null;
       const dashboardPath =
@@ -13,7 +13,6 @@
           ? "/dashboard/lecturer"
           : "/dashboard/student";
       const navItems = [
-        { label: "Home", href: "/" },
         { label: "Courses", href: "/courses" },
         { label: "Mentors", href: "/mentors" },
         { label: "Plans", href: "/plans" }
@@ -24,7 +23,6 @@
         navItems.push({ label: "Cart", href: "/cart" });
         navItems.push({ label: "Orders", href: "/orders" });
       }
-      const navSearchQ = typeof filters !== "undefined" && filters ? filters.q || "" : "";
     %>
     <div class="header-middle">
       <nav class="nav-links">
@@ -32,26 +30,22 @@
           <a href="<%= item.href %>"><%= item.label %></a>
         <% }); %>
       </nav>
-      <form class="search-pill" method="GET" action="/courses">
-        <span class="search-icon"></span>
-        <input type="search" name="q" value="<%= navSearchQ %>" placeholder="Search courses" />
-      </form>
     </div>
     <div class="header-actions">
       <% if (currentUser) { %>
         <div class="user-pill">
-          <div>
+          <div class="user-pill-meta">
             <strong><%= currentUser.name || "Member" %></strong>
             <div class="text-muted small text-uppercase">
               <%= currentUser.role %>
             </div>
           </div>
           <div class="user-pill-actions">
-            <a class="btn btn-outline-secondary btn-sm" href="<%= dashboardPath %>">
+            <a class="user-pill-dashboard" href="<%= dashboardPath %>">
               Dashboard
             </a>
             <form method="POST" action="/logout">
-              <button class="btn btn-link text-muted small" type="submit">
+              <button class="user-pill-signout" type="submit">
                 Sign Out
               </button>
             </form>

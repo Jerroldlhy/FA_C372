@@ -51,13 +51,17 @@ img {
   font-family: "Manrope", sans-serif;
 }
 
+.site-header .container {
+  width: min(1600px, 96vw);
+}
+
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 20px 0;
   gap: 20px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .brand {
@@ -67,6 +71,7 @@ img {
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .brand-dot {
@@ -84,6 +89,8 @@ img {
   color: #4b4b59;
   font-family: "Manrope", sans-serif;
   letter-spacing: 0.02em;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .nav-links a {
@@ -99,9 +106,10 @@ img {
 
 .header-middle {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1.25rem;
 }
 
@@ -110,29 +118,78 @@ img {
   align-items: center;
   gap: 14px;
   justify-content: flex-end;
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
   font-family: "Manrope", sans-serif;
 }
 
 .user-pill {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.85rem;
+  justify-content: space-between;
+  gap: 0.55rem;
   border: 1px solid #eceef6;
   background: #ffffff;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 16px;
   box-shadow: 0 10px 30px rgba(15, 15, 40, 0.08);
+  min-width: 220px;
+  line-height: 1.2;
+  position: relative;
+  top: -2px;
+}
+
+.user-pill-meta {
+  text-align: left;
 }
 
 .user-pill-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
+  flex-wrap: nowrap;
+  width: auto;
+}
+
+.user-pill-actions form {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .user-pill strong {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
+}
+
+.user-pill-dashboard {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-decoration: none;
+}
+
+.user-pill-dashboard:hover {
+  color: #4f5f74;
+}
+
+.user-pill-signout {
+  width: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.33rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(90deg, #6f63ef, #5d5fe6);
+  box-shadow: 0 12px 22px rgba(93, 95, 230, 0.3);
+  cursor: pointer;
 }
 
 .btn-link {
