@@ -9,6 +9,7 @@ const {
 } = require("../models/enrollmentModel");
 const {
   getCoursesWithStats,
+  getCoursesByInstructor,
   getInstructorCourseSummaries,
 } = require("../models/courseModel");
 const {
@@ -19,6 +20,7 @@ const { getAnnouncementsForLecturer } = require("../models/announcementModel");
 const {
   getAllUsers,
   getUserById,
+  getLecturers,
   updateUserRole,
   updateUserAccountStatus,
 } = require("../models/userModel");
@@ -110,10 +112,13 @@ const lecturerDashboard = async (req, res, next) => {
 
 const adminDashboard = async (req, res, next) => {
   try {
-    const users = await getAllUsers();
-    const courses = await getCoursesWithStats();
-    const transactions = await getAllTransactions();
-    res.render("adminDashboard", { users, courses, transactions, status: req.query });
+    const [users, courses, transactions, lecturers] = await Promise.all([
+      getAllUsers(),
+      getCoursesWithStats(),
+      getAllTransactions(),
+      getLecturers(),
+    ]);
+    res.render("adminDashboard", { users, courses, transactions, lecturers, status: req.query });
   } catch (err) {
     next(err);
   }
@@ -147,18 +152,53 @@ const adminUserDetails = async (req, res, next) => {
     const userId = req.validated?.userId || Number(req.params.id);
     const user = await getUserById(userId);
     if (!user) return res.redirect("/dashboard/admin?user=not_found");
+    const isLecturer = String(user.role || "").toLowerCase() === "lecturer";
 
-    const [enrollments, subscription, activities] = await Promise.all([
+    const [enrollments, assignedCourses, subscription, activities, transactions] = await Promise.all([
       getEnrollmentsByUserForAdmin(userId),
+      isLecturer ? getCoursesByInstructor(userId) : Promise.resolve([]),
       getSubscriptionByUser(userId),
       getUserActivities(userId, 60),
+      getTransactionsForUser(userId, 60),
     ]);
+
+    const toTimestamp = (value) => {
+      const time = new Date(value).getTime();
+      return Number.isFinite(time) ? time : 0;
+    };
+    const timeline = [
+      ...activities.map((item) => ({
+        kind: "activity",
+        created_at: item.created_at,
+        actor_user_id: item.actor_user_id,
+        ip_address: item.ip_address,
+        activity_type: item.activity_type,
+      })),
+      ...transactions.map((item) => {
+        const type = String(item.type || "").toLowerCase();
+        const direction = type.includes("topup")
+          ? "topup"
+          : type.includes("checkout") || type.includes("payment")
+          ? "spend"
+          : "neutral";
+        return {
+          kind: "transaction",
+          created_at: item.created_at,
+          activity_type: `transaction_${type || "recorded"}`,
+          transaction_type: item.type,
+          amount: Number(item.amount || 0),
+          direction,
+          status: item.status,
+        };
+      }),
+    ].sort((a, b) => toTimestamp(b.created_at) - toTimestamp(a.created_at));
 
     return res.render("adminUserDetails", {
       user,
       enrollments,
+      assignedCourses,
       subscription,
-      activities,
+      timeline,
       status: req.query,
     });
   } catch (err) {

@@ -1247,6 +1247,36 @@ img {
   border-top: 1px solid #f1f2f8;
   padding-top: 1rem;
   padding-bottom: 1rem;
+  color: #24263a;
+}
+
+.admin-table .activity-text {
+  color: #1f2336;
+  font-weight: 500;
+}
+
+.txn-amount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.txn-amount-topup {
+  color: #0f5132;
+  background: #d1fae5;
+}
+
+.txn-amount-spend {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.txn-amount-neutral {
+  color: #1f2937;
+  background: #e5e7eb;
 }
 
 .admin-table .user-row {

@@ -93,17 +93,29 @@
         <section class="col-12 col-xl-6">
           <div class="dashboard-panel card shadow-sm h-100">
             <div class="panel-header mb-3">
-              <h2 class="h5 mb-0">Enrolled Courses</h2>
+              <h2 class="h5 mb-0"><%= String(user.role || "").toLowerCase() === "lecturer" ? "Assigned Courses" : "Enrolled Courses" %></h2>
             </div>
             <div class="card-body pt-0">
-              <% if (!enrollments || enrollments.length === 0) { %>
-                <p class="text-muted mb-0">No enrolled courses.</p>
+              <% if (String(user.role || "").toLowerCase() === "lecturer") { %>
+                <% if (!assignedCourses || assignedCourses.length === 0) { %>
+                  <p class="text-muted mb-0">No assigned courses.</p>
+                <% } else { %>
+                  <ul class="mb-0">
+                    <% assignedCourses.forEach(function (item) { %>
+                      <li><%= item.course_name %> (<%= item.category || "General" %>)</li>
+                    <% }) %>
+                  </ul>
+                <% } %>
               <% } else { %>
-                <ul class="mb-0">
-                  <% enrollments.forEach(function (item) { %>
-                    <li><%= item.course_name %> (<%= item.category || "General" %>)</li>
-                  <% }) %>
-                </ul>
+                <% if (!enrollments || enrollments.length === 0) { %>
+                  <p class="text-muted mb-0">No enrolled courses.</p>
+                <% } else { %>
+                  <ul class="mb-0">
+                    <% enrollments.forEach(function (item) { %>
+                      <li><%= item.course_name %> (<%= item.category || "General" %>)</li>
+                    <% }) %>
+                  </ul>
+                <% } %>
               <% } %>
             </div>
           </div>
@@ -120,21 +132,24 @@
               <tr>
                 <th>When</th>
                 <th>Activity</th>
+                <th>Amount</th>
                 <th>Actor</th>
                 <th>IP</th>
               </tr>
             </thead>
             <tbody>
-              <% if (!activities || activities.length === 0) { %>
+              <% if (!timeline || timeline.length === 0) { %>
                 <tr>
-                  <td colspan="4" class="text-center text-muted">No activity logs yet.</td>
+                  <td colspan="5" class="text-center text-muted">No activity logs yet.</td>
                 </tr>
               <% } else { %>
-                <% activities.forEach(function (a) { %>
+                <% timeline.forEach(function (a) { %>
                   <tr>
-                    <td><%= a.created_at ? new Date(a.created_at).toLocaleString() : "" %></td>
-                    <td class="text-capitalize">
-                      <% if (a.activity_type === "login") { %>
+                    <td class="activity-text"><%= a.created_at ? new Date(a.created_at).toLocaleString() : "" %></td>
+                    <td class="activity-text">
+                      <% if (a.kind === "transaction") { %>
+                        Transaction: <%= String(a.transaction_type || "").replace(/_/g, " ") %> (<%= a.status || "unknown" %>)
+                      <% } else if (a.activity_type === "login") { %>
                         Logged in
                       <% } else if (a.activity_type === "logout") { %>
                         Logged out
@@ -150,8 +165,17 @@
                         <%= String(a.activity_type || "").replace(/_/g, " ") %>
                       <% } %>
                     </td>
-                    <td><%= a.actor_user_id || "-" %></td>
-                    <td><%= a.ip_address || "-" %></td>
+                    <td>
+                      <% if (a.kind === "transaction") { %>
+                        <span class="txn-amount <%= a.direction === 'topup' ? 'txn-amount-topup' : a.direction === 'spend' ? 'txn-amount-spend' : 'txn-amount-neutral' %>">
+                          <%= a.direction === "topup" ? "+" : a.direction === "spend" ? "-" : "" %>$<%= Number(a.amount || 0).toFixed(2) %>
+                        </span>
+                      <% } else { %>
+                        -
+                      <% } %>
+                    </td>
+                    <td class="activity-text"><%= a.actor_user_id || "-" %></td>
+                    <td class="activity-text"><%= a.ip_address || "-" %></td>
                   </tr>
                 <% }) %>
               <% } %>

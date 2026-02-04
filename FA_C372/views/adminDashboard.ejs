@@ -290,6 +290,20 @@
                       required
                     />
                   </label>
+                  <label>
+                    Lecturer
+                    <select class="form-select form-select-sm" name="instructor_id">
+                      <option value="">Unassigned</option>
+                      <% (lecturers || []).forEach(function (lecturer) { %>
+                        <option
+                          value="<%= lecturer.id %>"
+                          <%= Number(course.instructor_id) === Number(lecturer.id) ? "selected" : "" %>
+                        >
+                          <%= lecturer.name %> (ID <%= lecturer.id %>)
+                        </option>
+                      <% }); %>
+                    </select>
+                  </label>
                 </div>
                 <div class="form-footer mt-3">
                   <button class="btn btn-sm btn-outline-primary" type="submit">
