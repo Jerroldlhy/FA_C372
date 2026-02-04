@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Wallet Payment</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="course-page">
+    <%- include("partials/navbar") %>
+
+    <main class="section">
+      <div class="container">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+          <div>
+            <p class="mb-1 text-muted">Secure top-up payment</p>
+            <h2 class="mb-0">Choose your payment method</h2>
+          </div>
+          <div class="text-md-end">
+            <a href="/wallet" class="btn btn-outline-secondary">Back to wallet</a>
+          </div>
+        </div>
+
+        <% if (status?.topup_error) { %>
+          <div class="alert alert-danger">Top-up payment failed: <%= String(status.topup_error).replace(/_/g, " ") %>.</div>
+        <% } %>
+
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="alert alert-info">
+              <strong>Simple steps:</strong>
+              <ol class="mb-0 mt-2">
+                <li>Confirm amount and currency.</li>
+                <li>Choose PayPal, Stripe, or NETS.</li>
+                <li>Complete payment and return to wallet.</li>
+              </ol>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+              <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div>
+                  <div class="fw-semibold">Payment currency</div>
+                  <div class="small text-muted">NETS QR always charges in SGD.</div>
+                </div>
+                <form action="/wallet/payment/currency" method="POST" class="d-flex gap-2 align-items-center">
+                  <select name="currency" class="form-select form-select-sm">
+                    <% (availableCurrencies || []).forEach(function(option) { %>
+                      <option value="<%= option %>" <%= option === currency ? "selected" : "" %>><%= option %></option>
+                    <% }); %>
+                  </select>
+                  <button type="submit" class="btn btn-outline-primary btn-sm">Update</button>
+                </form>
+              </div>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body">
+                    <h5 class="card-title">PayPal</h5>
+                    <p class="card-text text-muted">Pay quickly with your PayPal account.</p>
+                    <div id="paypal-button-container" class="border rounded p-2 bg-light"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                  <div class="card-body">
+                    <h5 class="card-title">Stripe checkout</h5>
+                    <p class="card-text text-muted">Pay with card via Stripe secure checkout.</p>
+                    <button class="btn btn-dark w-100" type="button" id="stripe-checkout-btn">Pay with Stripe</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+              <div class="card-body">
+                <h5 class="card-title">NETS QR</h5>
+                <p class="small text-muted mb-2">Scan QR code and pay in your bank app.</p>
+                <% if (currency !== 'SGD') { %>
+                  <div class="alert alert-warning small mb-3">NETS settles in SGD. Conversion will be applied automatically.</div>
+                <% } %>
+                <form action="/wallet/topup/nets/request" method="POST" id="nets-form">
+                  <input type="hidden" name="amount" value="<%= Number(amount || 0).toFixed(2) %>" />
+                  <input type="hidden" name="currency" value="<%= currency %>" />
+                  <button type="submit" class="btn btn-info w-100" id="nets-submit">Generate NETS QR</button>
+                </form>
+              </div>
+            </div>
+
+            <div id="paypal-msg" class="small text-danger mt-3" style="display:none;"></div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title mb-3">Top-up summary</h5>
+                <ul class="list-unstyled mb-0">
+                  <li class="d-flex justify-content-between fw-semibold">
+                    <span>Amount</span>
+                    <span><%= currencySymbol %><%= Number(amount || 0).toFixed(2) %> <%= currency %></span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <% if (PAYPAL_CLIENT_ID) { %>
+      <script src="https://www.paypal.com/sdk/js?client-id=<%= PAYPAL_CLIENT_ID %>&currency=<%= currency %>&intent=capture"></script>
+    <% } %>
+    <script>
+      (function () {
+        var msg = document.getElementById("paypal-msg");
+        var stripeButton = document.getElementById("stripe-checkout-btn");
+        var paymentInProgress = false;
+
+        function setPaymentInProgress(active) {
+          paymentInProgress = active;
+          var netsButton = document.getElementById("nets-submit");
+          if (netsButton) {
+            netsButton.disabled = active;
+            netsButton.textContent = active ? "Processing..." : "Generate NETS QR";
+          }
+          if (stripeButton) {
+            stripeButton.disabled = active;
+            stripeButton.textContent = active ? "Processing..." : "Pay with Stripe";
+          }
+        }
+
+        function showError(text) {
+          if (!msg) return;
+          msg.style.display = "block";
+          msg.textContent = text || "Something went wrong. Please try again.";
+        }
+
+        function fetchJson(url, options) {
+          return fetch(url, options).then(function (res) {
+            return res.json().catch(function () { return {}; }).then(function (data) {
+              if (!res.ok) {
+                throw new Error(data.error || "Request failed.");
+              }
+              return data;
+            });
+          });
+        }
+
+        var amount = Number("<%= Number(amount || 0).toFixed(2) %>");
+        var currency = "<%= currency %>";
+
+        function createTopUpOrder() {
+          return fetchJson("/api/wallet/topup/paypal/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: amount, currency: currency }),
+          }).then(function (order) {
+              if (!order || !order.id) throw new Error("Invalid PayPal order response");
+              return order.id;
+            });
+        }
+
+        if (window.paypal) {
+          window.paypal.Buttons({
+            onClick: function (data, actions) {
+              if (paymentInProgress) {
+                showError("Payment is already in progress.");
+                return actions.reject();
+              }
+              setPaymentInProgress(true);
+              return actions.resolve();
+            },
+            createOrder: function () {
+              return createTopUpOrder().catch(function (err) {
+                setPaymentInProgress(false);
+                showError(err && err.message ? err.message : "Unable to start PayPal top-up.");
+              });
+            },
+            onApprove: function (data) {
+              return fetchJson("/api/wallet/topup/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: data.orderID }),
+              }).then(function () {
+                  window.location.href = "/wallet?topup_success=1&method=paypal";
+                })
+                .catch(function (err) {
+                  setPaymentInProgress(false);
+                  showError(err && err.message ? err.message : "Payment capture failed.");
+                });
+            },
+            onCancel: function () {
+              setPaymentInProgress(false);
+              showError("Payment cancelled.");
+            },
+            onError: function () {
+              setPaymentInProgress(false);
+              showError("Unable to start PayPal top-up.");
+            },
+          }).render("#paypal-button-container");
+        }
+
+        if (stripeButton) {
+          stripeButton.addEventListener("click", function () {
+            if (paymentInProgress) {
+              showError("Payment is already in progress.");
+              return;
+            }
+            setPaymentInProgress(true);
+            fetchJson("/api/wallet/topup/stripe/create-checkout-session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ amount: amount, currency: currency }),
+            }).then(function (data) {
+                if (!data || !data.url) throw new Error("Stripe session unavailable");
+                window.location.href = data.url;
+              })
+              .catch(function (err) {
+                setPaymentInProgress(false);
+                showError(err && err.message ? err.message : "Unable to start Stripe checkout.");
+              });
+          });
+        }
+
+        var netsForm = document.getElementById("nets-form");
+        if (netsForm) {
+          netsForm.addEventListener("submit", function (event) {
+            if (paymentInProgress) {
+              event.preventDefault();
+              showError("Payment is already in progress.");
+              return;
+            }
+            setPaymentInProgress(true);
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

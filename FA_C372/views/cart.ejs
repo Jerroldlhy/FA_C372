@@ -25,7 +25,10 @@
           <div class="course-hero-card">
             <p class="text-muted small mb-1">Items</p>
             <strong class="display-6"><%= items.length %></strong>
-            <p class="text-muted small mb-0">Total: $<%= Number(total || 0).toFixed(2) %></p>
+            <p class="text-muted small mb-0">Total: <%= currencySymbol %><%= Number(convertedTotal || 0).toFixed(2) %> <%= currency %></p>
+            <% if (currency !== "USD") { %>
+              <p class="text-muted small mb-0">Base USD: $<%= Number(total || 0).toFixed(2) %></p>
+            <% } %>
           </div>
         </div>
 
@@ -67,6 +70,9 @@
         <% } %>
         <% if (status?.payment_error) { %>
           <div class="alert alert-danger text-capitalize">Payment issue: <%= status.payment_error.replace(/_/g, " ") %>.</div>
+        <% } %>
+        <% if (status?.currency_updated) { %>
+          <div class="alert alert-success">Payment currency updated to <strong><%= currency %></strong>.</div>
         <% } %>
 
         <div class="dashboard-panel">
@@ -128,6 +134,21 @@
                 Choose a method below, complete payment, then place your order.
                 Apple Pay / Google Pay can be supported through Stripe account settings.
               </p>
+              <form method="POST" action="/payments/currency" class="row g-2 mb-3">
+                <div class="col-12 col-md-8">
+                  <label class="form-label small mb-1" for="payment_currency">Payment currency</label>
+                  <select class="form-select form-select-sm" id="payment_currency" name="currency">
+                    <% (supportedCurrencies || []).forEach(function(code) { %>
+                      <option value="<%= code %>" <%= code === currency ? "selected" : "" %>><%= code %></option>
+                    <% }); %>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 d-grid">
+                  <label class="form-label small mb-1">&nbsp;</label>
+                  <button class="btn btn-outline btn-sm" type="submit">Apply currency</button>
+                </div>
+              </form>
+              <p class="text-muted small mb-3">NETS QR is always charged in SGD.</p>
 
               <div class="row g-2 mb-3">
                 <div class="col-12 col-md-3">
@@ -191,7 +212,7 @@
               </div>
               <div class="col-12 col-md-4">
                 <label class="form-label small">&nbsp;</label>
-                <div class="form-control text-muted">Total: $<%= Number(total || 0).toFixed(2) %></div>
+                <div class="form-control text-muted">Total: <%= currencySymbol %><%= Number(convertedTotal || 0).toFixed(2) %> <%= currency %></div>
               </div>
               <div class="col-12 col-md-4 d-grid">
                 <label class="form-label small">&nbsp;</label>

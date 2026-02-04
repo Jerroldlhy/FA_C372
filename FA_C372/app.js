@@ -22,6 +22,7 @@ const orderController = require("./controllers/orderController");
 const paymentController = require("./controllers/paymentController");
 const dashboardController = require("./controllers/dashboardController");
 const lecturerController = require("./controllers/lecturerController");
+const learningController = require("./controllers/learningController");
 const pageController = require("./controllers/pageController");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
@@ -221,8 +222,26 @@ app.post(
 );
 
 app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
+app.post("/wallet/payment/start", authenticateToken, requireRole(["student"]), validators.validateTopUp, paymentController.startWalletTopUpPayment);
+app.get("/wallet/payment", authenticateToken, requireRole(["student"]), paymentController.showWalletTopUpPayment);
+app.post("/wallet/payment/currency", authenticateToken, requireRole(["student"]), validators.validateCurrencySelection, paymentController.setWalletTopUpCurrency);
 app.get("/wallet", authenticateToken, requireRole(["student"]), dashboardController.walletPage);
+app.post("/api/wallet/topup/paypal/create-order", authenticateToken, requireRole(["student"]), paymentController.createTopUpPaypalOrder);
+app.post("/api/wallet/topup/paypal/capture-order", authenticateToken, requireRole(["student"]), paymentController.captureTopUpPaypalOrder);
+app.post("/api/wallet/topup/stripe/create-checkout-session", authenticateToken, requireRole(["student"]), paymentController.createTopUpStripeSession);
+app.get("/wallet/topup/stripe/success", authenticateToken, requireRole(["student"]), paymentController.stripeTopUpSuccess);
+app.post("/wallet/topup/nets/request", authenticateToken, requireRole(["student"]), paymentController.requestTopUpNets);
+app.get("/wallet/topup/nets/success", authenticateToken, requireRole(["student"]), paymentController.netsTopUpSuccess);
+app.get("/wallet/topup/nets/fail", authenticateToken, requireRole(["student"]), paymentController.netsTopUpFail);
 app.get("/cart", authenticateToken, requireRole(["student"]), cartController.showCart);
+app.get("/learning", authenticateToken, requireRole(["student"]), learningController.myLearning);
+app.get("/learning/:courseId", authenticateToken, requireRole(["student"]), learningController.courseLearning);
+app.post(
+  "/learning/:courseId/lessons/:lessonNo/complete",
+  authenticateToken,
+  requireRole(["student"]),
+  learningController.completeLesson
+);
 app.post(
   "/cart/:id/remove",
   authenticateToken,
@@ -236,6 +255,13 @@ app.post(
   requireRole(["student"]),
   validators.validateCartQuantityUpdate,
   cartController.updateCourseQuantityInCart
+);
+app.post(
+  "/payments/currency",
+  authenticateToken,
+  requireRole(["student"]),
+  validators.validateCurrencySelection,
+  paymentController.setPaymentCurrency
 );
 app.post("/checkout", authenticateToken, requireRole(["student"]), validators.validateCheckout, orderController.checkout);
 app.get("/orders", authenticateToken, requireRole(["student"]), orderController.listMyOrders);

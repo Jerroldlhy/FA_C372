@@ -1,7 +1,9 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { normaliseCurrency } = require("../services/currency");
 const ROLE_OPTIONS = new Set(["student", "lecturer", "admin"]);
 const ACCOUNT_STATUS_OPTIONS = new Set(["active", "suspended"]);
 const PAYMENT_METHODS = new Set(["wallet", "paypal", "stripe", "nets"]);
+const TOPUP_METHODS = new Set(["wallet", "paypal", "bank_transfer", "card", "stripe", "nets"]);
 const MAX_CART_QTY = 20;
 
 const asTrimmedString = (value, maxLen = 255) => String(value || "").trim().slice(0, maxLen);
@@ -132,10 +134,17 @@ const validateAdminRoleUpdate = (req, res, next) => {
 const validateTopUp = (req, res, next) => {
   const amount = Number(req.body.amount);
   const paymentMethod = asTrimmedString(req.body.payment_method, 30).toLowerCase() || "wallet";
+  const currency = normaliseCurrency(req.body.currency);
   if (!Number.isFinite(amount) || amount <= 0) return res.redirect("/dashboard/student?topup_error=1");
-  if (!PAYMENT_METHODS.has(paymentMethod)) return res.redirect("/dashboard/student?topup_error=1");
+  if (!TOPUP_METHODS.has(paymentMethod)) return res.redirect("/dashboard/student?topup_error=1");
   req.body.amount = amount;
   req.body.payment_method = paymentMethod;
+  req.body.currency = currency;
+  next();
+};
+
+const validateCurrencySelection = (req, res, next) => {
+  req.body.currency = normaliseCurrency(req.body.currency);
   next();
 };
 
@@ -170,6 +179,7 @@ module.exports = {
   validateAdminUserIdParam,
   validateAdminStatusUpdate,
   validateTopUp,
+  validateCurrencySelection,
   validateAnnouncement,
   MAX_CART_QTY,
 };

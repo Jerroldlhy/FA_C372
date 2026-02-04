@@ -9,17 +9,98 @@
   <body class="course-page">
     <main class="section">
       <div class="container">
-        <div class="dashboard-panel text-center">
+        <div class="dashboard-panel text-center" style="max-width: 680px; margin: 0 auto;">
           <h1>Scan NETS QR to Pay</h1>
-          <p>Total: $<%= Number(total || 0).toFixed(2) %></p>
+          <p>Total: S$<%= Number(total || 0).toFixed(2) %> SGD</p>
+          <% if (sourceCurrency && sourceCurrency !== "SGD") { %>
+            <p class="small text-muted">Converted from <%= sourceCurrency %> for NETS settlement.</p>
+          <% } %>
           <img src="<%= qrCodeDataUri %>" alt="NETS QR code" style="max-width: 320px; margin: 0 auto;" />
-          <p class="small text-muted mt-3">After payment confirmation, continue below.</p>
+          <p class="small text-muted mt-3">Status updates every 3 seconds. You can still continue manually below.</p>
+          <p class="small text-muted mb-2">Reference: <%= txnRetrievalRef %></p>
+          <p class="fw-semibold mb-2">Time left: <span id="nets-timer">01:00</span></p>
+          <div class="alert alert-warning d-none" id="nets-expired">QR expired. Please generate a new NETS QR.</div>
           <div class="d-flex justify-content-center gap-2 mt-3">
-            <a class="btn btn-primary" href="/payments/nets/success?txn_retrieval_ref=<%= encodeURIComponent(txnRetrievalRef) %>">I paid successfully</a>
-            <a class="btn btn-outline" href="/payments/nets/fail?txn_retrieval_ref=<%= encodeURIComponent(txnRetrievalRef) %>&message=Cancelled">Cancel</a>
+            <a
+              class="btn btn-primary"
+              href="<%= successUrl || ('/payments/nets/success?txn_retrieval_ref=' + encodeURIComponent(txnRetrievalRef)) %>"
+            >
+              I paid successfully
+            </a>
+            <a
+              class="btn btn-outline"
+              href="<%= failUrl || ('/payments/nets/fail?txn_retrieval_ref=' + encodeURIComponent(txnRetrievalRef) + '&message=Cancelled') %>"
+            >
+              Cancel
+            </a>
           </div>
         </div>
       </div>
     </main>
+    <script>
+      (function () {
+        var statusUrl = "<%= statusUrl || '' %>";
+        var successUrl = "<%= successUrl || ('/payments/nets/success?txn_retrieval_ref=' + encodeURIComponent(txnRetrievalRef)) %>";
+        var failUrl = "<%= failUrl || ('/payments/nets/fail?txn_retrieval_ref=' + encodeURIComponent(txnRetrievalRef) + '&message=Cancelled') %>";
+        var retryUrl = "<%= retryUrl || '/cart' %>";
+        var timerNode = document.getElementById("nets-timer");
+        var expiredNode = document.getElementById("nets-expired");
+        var remaining = 60;
+        var finished = false;
+
+        function stop(reason) {
+          if (finished) return;
+          finished = true;
+          if (reason === "expired") {
+            if (timerNode) timerNode.textContent = "Expired";
+            if (expiredNode) expiredNode.classList.remove("d-none");
+            fetch("/api/payments/mark-failed", { method: "POST", credentials: "same-origin" }).catch(function () {});
+            setTimeout(function () {
+              window.location.href = retryUrl;
+            }, 1500);
+          }
+        }
+
+        function pollStatus() {
+          if (!statusUrl || finished) return;
+          fetch(statusUrl, { credentials: "same-origin" })
+            .then(function (res) {
+              return res.json();
+            })
+            .then(function (data) {
+              if (!data || finished) return;
+              if (data.success) {
+                finished = true;
+                window.location.href = successUrl;
+              } else if (data.fail) {
+                finished = true;
+                var error = encodeURIComponent(data.error || "NETS transaction failed.");
+                var target = failUrl.indexOf("message=") >= 0 ? failUrl : failUrl + "&message=" + error;
+                window.location.href = target;
+              }
+            })
+            .catch(function () {});
+        }
+
+        var interval = setInterval(function () {
+          if (finished) {
+            clearInterval(interval);
+            return;
+          }
+          remaining -= 1;
+          var min = Math.floor(Math.max(remaining, 0) / 60);
+          var sec = Math.max(remaining, 0) % 60;
+          if (timerNode) timerNode.textContent = String(min).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+          if (remaining <= 0) {
+            clearInterval(interval);
+            stop("expired");
+          } else {
+            pollStatus();
+          }
+        }, 1000);
+
+        pollStatus();
+      })();
+    </script>
   </body>
 </html>

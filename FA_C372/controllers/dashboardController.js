@@ -24,6 +24,13 @@ const {
 } = require("../models/userModel");
 const { getSubscriptionByUser } = require("../models/subscriptionModel");
 const { getUserActivities, logUserActivity } = require("../models/userActivityModel");
+const {
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  normaliseCurrency,
+  convertAmount,
+  getSymbol,
+} = require("../services/currency");
 
 const studentDashboard = async (req, res, next) => {
   try {
@@ -31,7 +38,18 @@ const studentDashboard = async (req, res, next) => {
     const enrollments = await getEnrollmentsByStudent(userId);
     const walletBalance = await getWalletBalance(userId);
     const transactions = await getTransactionsForUser(userId);
-    res.render("dashboard", { enrollments, walletBalance, transactions, status: req.query });
+    const selectedCurrency = normaliseCurrency(req.session?.currency || DEFAULT_CURRENCY);
+    const walletDisplayBalance = convertAmount(walletBalance, DEFAULT_CURRENCY, selectedCurrency);
+    res.render("dashboard", {
+      enrollments,
+      walletBalance,
+      walletDisplayBalance,
+      selectedCurrency,
+      currencySymbol: getSymbol(selectedCurrency),
+      supportedCurrencies: SUPPORTED_CURRENCIES,
+      transactions,
+      status: req.query,
+    });
   } catch (err) {
     next(err);
   }
@@ -175,7 +193,17 @@ const walletPage = async (req, res, next) => {
     const userId = req.user.id;
     const walletBalance = await getWalletBalance(userId);
     const transactions = await getTransactionsForUser(userId, 12);
-    res.render("wallet", { walletBalance, transactions, status: req.query });
+    const selectedCurrency = normaliseCurrency(req.session?.currency || DEFAULT_CURRENCY);
+    const walletDisplayBalance = convertAmount(walletBalance, DEFAULT_CURRENCY, selectedCurrency);
+    res.render("wallet", {
+      walletBalance,
+      walletDisplayBalance,
+      selectedCurrency,
+      currencySymbol: getSymbol(selectedCurrency),
+      supportedCurrencies: SUPPORTED_CURRENCIES,
+      transactions,
+      status: req.query,
+    });
   } catch (err) {
     next(err);
   }
@@ -186,11 +214,15 @@ const topUpWallet = async (req, res, next) => {
     const amount = Number(req.body.amount || 0);
     if (!amount || amount <= 0) return res.redirect("/dashboard/student?topup_error=1");
     const method = (req.body.payment_method || "wallet").toLowerCase();
-    const type = method === "wallet" ? "wallet_topup" : `${method}_topup`.replace(/[^a-z0-9_]/g, "");
+    if (method !== "wallet") return res.redirect("/wallet?topup_error=external_flow");
+    const selectedCurrency = normaliseCurrency(req.body.currency || req.session?.currency || DEFAULT_CURRENCY);
+    const walletAmount = convertAmount(amount, selectedCurrency, DEFAULT_CURRENCY);
+    if (!walletAmount || walletAmount <= 0) return res.redirect("/dashboard/student?topup_error=1");
+    const type = "wallet_topup";
     const userId = req.user.id;
-    await addWalletBalance(userId, amount);
-    await createTransaction(userId, type, amount, "completed");
-    res.redirect(`/dashboard/student?topup_success=1&method=${method}`);
+    await addWalletBalance(userId, walletAmount);
+    await createTransaction(userId, type, walletAmount, "completed");
+    res.redirect(`/dashboard/student?topup_success=1&method=${method}&currency=${selectedCurrency}`);
   } catch (err) {
     next(err);
   }

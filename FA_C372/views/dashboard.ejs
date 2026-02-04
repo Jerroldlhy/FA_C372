@@ -27,8 +27,8 @@
           </div>
           <div class="student-hero-card">
             <p class="text-muted small mb-1">Wallet balance</p>
-            <strong class="display-6">$<%= Number(walletBalance || 0).toFixed(2) %></strong>
-            <p class="text-muted small mb-0">Pay with wallet or external methods.</p>
+            <strong class="display-6"><%= currencySymbol %><%= Number(walletDisplayBalance || 0).toFixed(2) %></strong>
+            <p class="text-muted small mb-0">Equivalent to $<%= Number(walletBalance || 0).toFixed(2) %> USD.</p>
           </div>
         </section>
 
@@ -51,7 +51,7 @@
               <div class="card-body">
                 <h5 class="card-title">Top-up wallet</h5>
                 <p class="text-muted small">
-                  Use PayPal, bank transfer, or local card to load funds instantly.
+                  Instant wallet credit for quick testing.
                 </p>
                 <form method="POST" action="/wallet/topup" class="topup-form">
                   <div class="mb-3">
@@ -70,15 +70,23 @@
                     <label class="form-label small" for="method">Payment method</label>
                     <select class="form-select form-select-sm" id="method" name="payment_method">
                       <option value="wallet">Wallet</option>
-                      <option value="paypal">PayPal</option>
-                      <option value="bank_transfer">Bank transfer</option>
-                      <option value="card">Debit/Credit card</option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="topup_currency">Currency</label>
+                    <select class="form-select form-select-sm" id="topup_currency" name="currency">
+                      <% (supportedCurrencies || []).forEach(function(code) { %>
+                        <option value="<%= code %>" <%= code === selectedCurrency ? "selected" : "" %>><%= code %></option>
+                      <% }); %>
                     </select>
                   </div>
                   <button class="btn btn-gradient w-100 btn-sm" type="submit">
                     Top up now
                   </button>
                 </form>
+                <p class="text-muted small mt-2 mb-0">
+                  For PayPal, Stripe, and NETS top-up, use the <a href="/wallet">Wallet page</a>.
+                </p>
               </div>
             </div>
             <div class="wallet-card card mt-4">

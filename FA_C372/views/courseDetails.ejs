@@ -38,6 +38,9 @@
       <% if (status && status.enrolled) { %>
         <div class="alert alert-success">Enrollment successful.</div>
       <% } %>
+      <% if (status && status.content_error === "not_enrolled") { %>
+        <div class="alert alert-warning">You must enroll first to access full course content.</div>
+      <% } %>
 
       <div class="row g-4">
         <div class="col-12 col-lg-8">
@@ -58,6 +61,9 @@
                     </button>
                   </form>
                   <a class="btn btn-outline-primary" href="/cart">Go to Cart</a>
+                  <% if (enrolled) { %>
+                    <a class="btn btn-primary" href="/learning/<%= course.id %>">Start Learning</a>
+                  <% } %>
                 </div>
               <% } %>
             </div>

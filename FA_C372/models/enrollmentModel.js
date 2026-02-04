@@ -27,6 +27,27 @@ const createEnrollment = async (courseId, studentId) => {
   );
 };
 
+const getEnrollmentByStudentAndCourse = async (studentId, courseId) => {
+  const [rows] = await pool.query(
+    `SELECT id, course_id, student_id, progress, created_at
+     FROM enrollments
+     WHERE student_id = ? AND course_id = ?
+     LIMIT 1`,
+    [studentId, courseId]
+  );
+  return rows[0] || null;
+};
+
+const updateEnrollmentProgress = async (studentId, courseId, progress) => {
+  const safeProgress = Math.max(0, Math.min(Number(progress) || 0, 100));
+  await pool.query(
+    `UPDATE enrollments
+     SET progress = ?
+     WHERE student_id = ? AND course_id = ?`,
+    [safeProgress, studentId, courseId]
+  );
+};
+
 const getEnrollmentsForLecturer = async (lecturerId) => {
   const [rows] = await pool.query(
     `SELECT e.id, e.progress, c.course_name, u.name AS student_name
@@ -117,4 +138,6 @@ module.exports = {
   getEnrollmentsByInstructorCourse,
   getCompletionTrendForInstructor,
   getStudentsForCourse,
+  getEnrollmentByStudentAndCourse,
+  updateEnrollmentProgress,
 };

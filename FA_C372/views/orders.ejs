@@ -50,6 +50,7 @@
                       <td><%= order.created_at ? new Date(order.created_at).toLocaleString() : "" %></td>
                       <td class="text-end">
                         <a class="btn btn-sm btn-outline-primary" href="/orders/<%= order.id %>">View</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="/orders/<%= order.id %>?download=receipt">Receipt</a>
                       </td>
                     </tr>
                   <% }); %>

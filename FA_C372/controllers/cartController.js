@@ -6,6 +6,13 @@ const {
   getCartItemsForUser,
 } = require("../models/cartModel");
 const { isStudentEnrolled } = require("../models/enrollmentModel");
+const {
+  DEFAULT_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  normaliseCurrency,
+  convertAmount,
+  getSymbol,
+} = require("../services/currency");
 
 const showCart = async (req, res, next) => {
   try {
@@ -13,9 +20,15 @@ const showCart = async (req, res, next) => {
     const total = items.reduce((sum, item) => {
       return sum + Number(item.price || 0) * Number(item.quantity || 1);
     }, 0);
+    const currency = normaliseCurrency(req.session?.currency || DEFAULT_CURRENCY);
+    const convertedTotal = convertAmount(total, DEFAULT_CURRENCY, currency);
     res.render("cart", {
       items,
       total,
+      currency,
+      supportedCurrencies: SUPPORTED_CURRENCIES,
+      currencySymbol: getSymbol(currency),
+      convertedTotal,
       status: req.query,
       activePayment: req.session?.payment || null,
       paypalClientId: process.env.PAYPAL_CLIENT_ID || "",

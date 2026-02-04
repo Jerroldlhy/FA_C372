@@ -12,7 +12,7 @@
         <div class="dashboard-panel text-center">
           <h1>NETS Payment Failed</h1>
           <p class="text-muted"><%= message || "Transaction failed." %></p>
-          <a class="btn btn-outline" href="/cart">Back to cart</a>
+          <a class="btn btn-outline" href="<%= backUrl || '/cart' %>"><%= backLabel || "Back" %></a>
         </div>
       </div>
     </main>

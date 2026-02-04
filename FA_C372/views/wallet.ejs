@@ -25,21 +25,31 @@
             <p class="eyebrow text-uppercase text-muted mb-2">Digital wallet</p>
             <h1 class="display-4 fw-bold mb-2">Top up and pay with confidence</h1>
             <p class="text-muted lead">
-              Load funds instantly via PayPal, card, or bank transfer, and keep everything processed
-              inside the wallet.
+              Choose currency, then top up via wallet instant credit or external gateways.
             </p>
           </div>
           <div class="wallet-pill">
             <p class="text-muted small mb-1">Available balance</p>
-            <strong class="display-5">$<%= Number(walletBalance || 0).toFixed(2) %></strong>
-            <p class="text-muted small mb-0">Auto-will use funds first, then external methods.</p>
+            <strong class="display-5"><%= currencySymbol %><%= Number(walletDisplayBalance || 0).toFixed(2) %></strong>
+            <p class="text-muted small mb-0">Equivalent to $<%= Number(walletBalance || 0).toFixed(2) %> USD.</p>
           </div>
         </header>
 
+        <% if (status?.topup_success) { %>
+          <div class="alert alert-success">Top-up complete via <%= status.method || "selected" %>.</div>
+        <% } %>
+        <% if (status?.topup_error === "external_flow") { %>
+          <div class="alert alert-warning">Use the external payment buttons for PayPal, Stripe or NETS top-ups.</div>
+        <% } %>
+        <% if (status?.topup_error && status?.topup_error !== "external_flow") { %>
+          <div class="alert alert-danger">Top-up failed: <%= String(status.topup_error).replace(/_/g, " ") %>.</div>
+        <% } %>
+
         <section class="wallet-grid">
           <div class="wallet-card stack-card">
-            <h5 class="mb-3">Top-up options</h5>
-            <form method="POST" action="/wallet/topup" class="wallet-topup-form">
+            <h5 class="mb-3">Instant wallet credit</h5>
+            <form method="POST" action="/wallet/topup" class="wallet-topup-form" id="walletTopupForm">
+              <input type="hidden" name="payment_method" value="wallet" />
               <div class="form-floating mb-3">
                 <input
                   class="form-control"
@@ -51,49 +61,47 @@
                   placeholder="Amount"
                   required
                 />
-                <label for="amount-wallet">Amount (USD)</label>
+                <label for="amount-wallet">Amount</label>
               </div>
               <div class="form-floating mb-3">
-                <select
-                  class="form-select"
-                  id="payment_method_wallet"
-                  name="payment_method"
-                >
-                  <option value="wallet">Digital wallet (instant)</option>
-                  <option value="paypal">PayPal</option>
-                  <option value="bank_transfer">Bank transfer</option>
-                  <option value="card">Debit/Credit card</option>
+                <select class="form-select" id="currency_wallet" name="currency">
+                  <% (supportedCurrencies || []).forEach(function(code) { %>
+                    <option value="<%= code %>" <%= code === selectedCurrency ? "selected" : "" %>><%= code %></option>
+                  <% }); %>
                 </select>
-                <label for="payment_method_wallet">Payment method</label>
+                <label for="currency_wallet">Currency</label>
               </div>
-              <button class="btn btn-gradient w-100 fs-6" type="submit">Top up now</button>
+              <button class="btn btn-gradient w-100 fs-6" type="submit">Top up instantly</button>
             </form>
-            <p class="text-muted small mt-3">
-              Spending uses wallet funds first, then fails over to PayPal/card automatically.
-            </p>
+            <p class="text-muted small mt-3 mb-0">For external methods, use the gateway buttons below.</p>
           </div>
 
           <div class="wallet-card stack-card">
-            <h5 class="mb-3">Payment guidance</h5>
-            <ul class="text-muted small guidance-list">
-              <li>Wallet charges are instant, while bank transfers may take up to 24 hrs.</li>
-              <li>PayPal/card toggles help keep you covered if your balance runs low.</li>
-              <li>Transactions sync automatically with your dashboard history.</li>
-            </ul>
-            <div class="mt-auto text-end">
-              <a href="/courses" class="link-primary small">Browse courses to spend your wallet</a>
-            </div>
+            <h5 class="mb-3">External payment gateways</h5>
+            <p class="text-muted small">
+              Use a dedicated payment page (PayPal/Stripe/NETS) and credit wallet only after payment success.
+            </p>
+            <form method="POST" action="/wallet/payment/start" class="wallet-topup-form">
+              <div class="form-floating mb-3">
+                <input class="form-control" id="externalAmount" name="amount" type="number" min="1" step="0.01" placeholder="Amount" required />
+                <label for="externalAmount">Amount</label>
+              </div>
+              <div class="form-floating mb-3">
+                <select class="form-select" id="externalCurrency" name="currency">
+                  <% (supportedCurrencies || []).forEach(function(code) { %>
+                    <option value="<%= code %>" <%= code === selectedCurrency ? "selected" : "" %>><%= code %></option>
+                  <% }); %>
+                </select>
+                <label for="externalCurrency">Currency</label>
+              </div>
+              <input type="hidden" name="payment_method" value="paypal" />
+              <button class="btn btn-outline-primary w-100" type="submit">Proceed to payment page</button>
+            </form>
+            <p class="text-muted small mt-3 mb-0">You can choose PayPal, Stripe, or NETS on the next page.</p>
           </div>
         </section>
 
-        <% if (status?.topup_success) { %>
-          <div class="alert alert-success">Top-up complete.</div>
-        <% } %>
-        <% if (status?.topup_error) { %>
-          <div class="alert alert-danger">Enter a valid amount.</div>
-        <% } %>
-
-        <section class="wallet-card transactions card stack-card">
+        <section class="wallet-card transactions card stack-card mt-4">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h5 class="card-title mb-0">Recent transactions</h5>
@@ -133,6 +141,7 @@
         </section>
       </div>
     </main>
+
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"

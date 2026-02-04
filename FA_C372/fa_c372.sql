@@ -4,7 +4,6 @@
 -- ------------------------------------------------------
 -- Server version	8.0.21
 
-UNLOCK TABLES;
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -40,7 +39,11 @@ CREATE TABLE `cart_items` (
 -- Dumping data for table `cart_items`
 --
 
+LOCK TABLES `cart_items` WRITE;
+/*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
 INSERT INTO `cart_items` VALUES (1,1,1,1);
+/*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `carts`
@@ -63,7 +66,11 @@ CREATE TABLE `carts` (
 -- Dumping data for table `carts`
 --
 
+LOCK TABLES `carts` WRITE;
+/*!40000 ALTER TABLE `carts` DISABLE KEYS */;
 INSERT INTO `carts` VALUES (1,1,'2026-02-03 17:00:15');
+/*!40000 ALTER TABLE `carts` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `categories`
@@ -84,6 +91,10 @@ CREATE TABLE `categories` (
 -- Dumping data for table `categories`
 --
 
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `course_reviews`
@@ -111,6 +122,10 @@ CREATE TABLE `course_reviews` (
 -- Dumping data for table `course_reviews`
 --
 
+LOCK TABLES `course_reviews` WRITE;
+/*!40000 ALTER TABLE `course_reviews` DISABLE KEYS */;
+/*!40000 ALTER TABLE `course_reviews` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `courses`
@@ -144,7 +159,11 @@ CREATE TABLE `courses` (
 -- Dumping data for table `courses`
 --
 
+LOCK TABLES `courses` WRITE;
+/*!40000 ALTER TABLE `courses` DISABLE KEYS */;
 INSERT INTO `courses` VALUES (1,'Fintech','fintech',150.00,'SOI',NULL,'2026-02-03 14:32:25',NULL,NULL,0,1,NULL);
+/*!40000 ALTER TABLE `courses` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `enrollments`
@@ -171,6 +190,10 @@ CREATE TABLE `enrollments` (
 -- Dumping data for table `enrollments`
 --
 
+LOCK TABLES `enrollments` WRITE;
+/*!40000 ALTER TABLE `enrollments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `enrollments` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `fraud_events`
@@ -199,6 +222,10 @@ CREATE TABLE `fraud_events` (
 -- Dumping data for table `fraud_events`
 --
 
+LOCK TABLES `fraud_events` WRITE;
+/*!40000 ALTER TABLE `fraud_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `fraud_events` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Temporary view structure for view `instructors`
@@ -238,6 +265,10 @@ CREATE TABLE `order_items` (
 -- Dumping data for table `order_items`
 --
 
+LOCK TABLES `order_items` WRITE;
+/*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
+/*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `orders`
@@ -263,6 +294,10 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
+LOCK TABLES `orders` WRITE;
+/*!40000 ALTER TABLE `orders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `orders` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `payment_attempts`
@@ -296,6 +331,10 @@ CREATE TABLE `payment_attempts` (
 -- Dumping data for table `payment_attempts`
 --
 
+LOCK TABLES `payment_attempts` WRITE;
+/*!40000 ALTER TABLE `payment_attempts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_attempts` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `payment_retries`
@@ -325,6 +364,10 @@ CREATE TABLE `payment_retries` (
 -- Dumping data for table `payment_retries`
 --
 
+LOCK TABLES `payment_retries` WRITE;
+/*!40000 ALTER TABLE `payment_retries` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payment_retries` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `payments`
@@ -355,6 +398,10 @@ CREATE TABLE `payments` (
 -- Dumping data for table `payments`
 --
 
+LOCK TABLES `payments` WRITE;
+/*!40000 ALTER TABLE `payments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payments` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `sessions`
@@ -378,7 +425,11 @@ CREATE TABLE `sessions` (
 -- Dumping data for table `sessions`
 --
 
-INSERT INTO `sessions` VALUES ('1S827l0STQoSyRtOaFjeNTbKcbyfExsL','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T17:16:24.422Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 01:16:24.568000','2026-02-03 15:16:24','2026-02-03 15:16:24'),('M19Kx1ip6lIueeRgPi2rXU3kPZSsFJwv','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-03T18:23:52.654Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":1,\"role\":\"student\",\"name\":\"Mary Jane\"}}','2026-02-04 03:15:28.313000','2026-02-03 16:23:52','2026-02-03 17:15:28');
+LOCK TABLES `sessions` WRITE;
+/*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
+INSERT INTO `sessions` VALUES ('3zGxZGmEz50HAqCWUmvwXhzGF4g6F1tF','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-04T13:26:06.376Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":3,\"role\":\"lecturer\",\"name\":\"peter tan\"}}','2026-02-04 21:26:24.051000','2026-02-04 11:26:06','2026-02-04 11:26:24'),('hmv83Z-Jl8zvCEMDsz9s9pClo8t7G-rf','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-04T05:46:20.550Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":3,\"role\":\"lecturer\",\"name\":\"peter tan\"}}','2026-02-04 13:46:23.329000','2026-02-04 03:46:20','2026-02-04 03:46:23'),('t6i4BDmB_6YMM_gQ9vBVhLNh09gl26N0','{\"cookie\":{\"originalMaxAge\":7200000,\"expires\":\"2026-02-04T05:28:11.015Z\",\"secure\":false,\"httpOnly\":true,\"path\":\"/\",\"sameSite\":\"lax\"},\"user\":{\"id\":2,\"role\":\"admin\",\"name\":\"Admin1\"}}','2026-02-04 13:46:11.668000','2026-02-04 03:28:11','2026-02-04 03:46:11');
+/*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `subscriptions`
@@ -408,6 +459,10 @@ CREATE TABLE `subscriptions` (
 -- Dumping data for table `subscriptions`
 --
 
+LOCK TABLES `subscriptions` WRITE;
+/*!40000 ALTER TABLE `subscriptions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `subscriptions` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `transactions`
@@ -433,6 +488,43 @@ CREATE TABLE `transactions` (
 -- Dumping data for table `transactions`
 --
 
+LOCK TABLES `transactions` WRITE;
+/*!40000 ALTER TABLE `transactions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `transactions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_activity_logs`
+--
+
+DROP TABLE IF EXISTS `user_activity_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_activity_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `actor_user_id` int DEFAULT NULL,
+  `activity_type` varchar(40) NOT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `details` json DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_activity_user_created` (`user_id`,`created_at`),
+  KEY `fk_user_activity_actor` (`actor_user_id`),
+  CONSTRAINT `fk_user_activity_actor` FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_user_activity_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_activity_logs`
+--
+
+LOCK TABLES `user_activity_logs` WRITE;
+/*!40000 ALTER TABLE `user_activity_logs` DISABLE KEYS */;
+INSERT INTO `user_activity_logs` VALUES (1,1,1,'login','::1',NULL,'2026-02-04 11:26:06'),(2,3,3,'login','::1',NULL,'2026-02-04 11:26:24');
+/*!40000 ALTER TABLE `user_activity_logs` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `user_kyc`
@@ -461,6 +553,10 @@ CREATE TABLE `user_kyc` (
 -- Dumping data for table `user_kyc`
 --
 
+LOCK TABLES `user_kyc` WRITE;
+/*!40000 ALTER TABLE `user_kyc` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_kyc` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `users`
@@ -477,23 +573,27 @@ CREATE TABLE `users` (
   `role` enum('student','lecturer','admin') DEFAULT 'student',
   `email_verified` tinyint(1) DEFAULT '0',
   `verification_token` varchar(128) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `password_reset_token` varchar(128) DEFAULT NULL,
   `password_reset_expires_at` datetime DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `account_status` enum('active','suspended') NOT NULL DEFAULT 'active',
+  `suspended_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   KEY `verification_token` (`verification_token`),
-  KEY `password_reset_token` (`password_reset_token`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `idx_users_password_reset_token` (`password_reset_token`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`,`name`,`email`,`password_hash`,`role`,`email_verified`,`verification_token`,`password_reset_token`,`password_reset_expires_at`,`created_at`) VALUES
-(1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,NULL,NULL,'2026-02-03 09:47:19'),
-(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,NULL,NULL,'2026-02-03 09:47:19');
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL),(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL),(3,'peter tan','peter@peter.com','$2b$10$JI7jiZkq35y0Bfihone15u7hOoXIZajtCBde2KbrKOJI4dzuvf2fe','lecturer',0,'a92069aefb014000bb11e86ea722b6206936cf7eb3ae3ebe','2026-02-04 03:22:27',NULL,NULL,'active',NULL),(4,'Test acc','rpwansuey@gmail.com','$2b$10$Azm9njWFxxOAeJ7e8uYFIelV8md5WccwgN0EPZi2z5FSFYFfLDplW','student',1,NULL,'2026-02-04 03:24:49',NULL,NULL,'active',NULL);
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `wallet`
@@ -515,6 +615,10 @@ CREATE TABLE `wallet` (
 -- Dumping data for table `wallet`
 --
 
+LOCK TABLES `wallet` WRITE;
+/*!40000 ALTER TABLE `wallet` DISABLE KEYS */;
+/*!40000 ALTER TABLE `wallet` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Final view structure for view `instructors`
@@ -543,5 +647,4 @@ CREATE TABLE `wallet` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-04 11:21:30
-
+-- Dump completed on 2026-02-04 19:27:21

@@ -11,8 +11,11 @@
       <div class="container">
         <div class="dashboard-panel text-center">
           <h1>NETS Payment Successful</h1>
-          <p class="text-muted">Reference: <%= txnRetrievalRef %></p>
-          <a class="btn btn-primary" href="/cart?payment_ready=nets">Back to cart</a>
+          <p class="text-muted"><%= message || "Payment successful." %></p>
+          <% if (txnRetrievalRef) { %>
+            <p class="text-muted small">Reference: <%= txnRetrievalRef %></p>
+          <% } %>
+          <a class="btn btn-primary" href="<%= backUrl || '/cart?payment_ready=nets' %>"><%= backLabel || "Back" %></a>
         </div>
       </div>
     </main>
