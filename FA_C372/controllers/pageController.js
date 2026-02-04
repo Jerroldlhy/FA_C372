@@ -1,7 +1,11 @@
 const { getCoursesWithStats, getCoursesForInstructors, getInstructorStats } = require("../models/courseModel");
 const { getLecturers } = require("../models/userModel");
 const { getReviewsForCourses } = require("../models/reviewModel");
-const { getSubscriptionByUser, upsertSubscription } = require("../models/subscriptionModel");
+const {
+  getSubscriptionByUser,
+  upsertSubscription,
+  cancelSubscriptionByUser,
+} = require("../models/subscriptionModel");
 const { logUserActivity } = require("../models/userActivityModel");
 
 const home = async (req, res, next) => {
@@ -44,10 +48,22 @@ const plans = async (req, res, next) => {
   try {
     const plans = [PLAN_CATALOG.free, PLAN_CATALOG.pro, PLAN_CATALOG.enterprise];
     let currentSubscription = null;
+    let nextBillingDate = null;
     if (req.user?.id) {
       currentSubscription = await getSubscriptionByUser(req.user.id);
+      if (currentSubscription && String(currentSubscription.status).toLowerCase() === "active") {
+        const base = new Date(currentSubscription.starts_at);
+        if (!Number.isNaN(base.getTime())) {
+          const next = new Date(base);
+          const now = new Date();
+          while (next <= now) {
+            next.setMonth(next.getMonth() + 1);
+          }
+          nextBillingDate = next;
+        }
+      }
     }
-    res.render("plans", { plans, currentSubscription, status: req.query });
+    res.render("plans", { plans, currentSubscription, nextBillingDate, status: req.query });
   } catch (err) {
     next(err);
   }
@@ -82,6 +98,36 @@ const subscribePlan = async (req, res, next) => {
     return res.redirect(`/plans?subscription_success=1&plan=${encodeURIComponent(plan.code)}`);
   } catch (err) {
     next(err);
+  }
+};
+
+const cancelPlan = async (req, res, next) => {
+  try {
+    if (!req.user?.id) return res.redirect("/login");
+    const currentSubscription = await getSubscriptionByUser(req.user.id);
+    if (!currentSubscription) {
+      return res.redirect("/plans?subscription_error=no_subscription");
+    }
+    if (String(currentSubscription.status || "").toLowerCase() === "cancelled") {
+      return res.redirect("/plans?subscription_error=already_cancelled");
+    }
+
+    const cancelled = await cancelSubscriptionByUser(req.user.id, new Date());
+    if (!cancelled) {
+      return res.redirect("/plans?subscription_error=cancel_failed");
+    }
+
+    await logUserActivity({
+      userId: req.user.id,
+      actorUserId: req.user.id,
+      activityType: "plan_cancelled",
+      ipAddress: req.ip,
+      details: { previousPlanCode: currentSubscription.plan_code },
+    });
+
+    return res.redirect("/plans?subscription_cancelled=1");
+  } catch (err) {
+    return next(err);
   }
 };
 
@@ -127,5 +173,6 @@ module.exports = {
   home,
   plans,
   subscribePlan,
+  cancelPlan,
   mentors,
 };

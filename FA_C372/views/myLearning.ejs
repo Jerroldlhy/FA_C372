@@ -22,6 +22,15 @@
             <h1 class="display-6 fw-bold mb-1">My Learning</h1>
             <p class="text-muted mb-0">Only your enrolled courses appear here.</p>
           </div>
+          <% if (enrollments && enrollments.length) { %>
+            <% const totalCourses = enrollments.length; %>
+            <% const avgProgress = Math.round(enrollments.reduce(function(sum, item) { return sum + Number(item.progress || 0); }, 0) / totalCourses); %>
+            <div class="course-hero-card">
+              <p class="text-muted small mb-1">Enrolled courses</p>
+              <strong class="display-6"><%= totalCourses %></strong>
+              <p class="text-muted small mb-0">Average progress: <%= avgProgress %>%</p>
+            </div>
+          <% } %>
         </div>
 
         <% if (status?.error === "invalid_course") { %>
@@ -56,7 +65,7 @@
                       ></div>
                     </div>
                     <p class="text-muted small mb-3"><%= progress %>% complete</p>
-                    <a class="btn btn-sm btn-outline-primary" href="/learning/<%= item.course_id %>">Open course</a>
+                    <a class="btn btn-sm btn-outline-primary" href="/learning/<%= item.course_id %>">Continue learning</a>
                   </article>
                 </div>
               <% }); %>

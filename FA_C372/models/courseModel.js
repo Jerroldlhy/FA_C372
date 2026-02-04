@@ -1,6 +1,8 @@
 const pool = require("./db");
 
 const parseNumber = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
 };
@@ -18,9 +20,11 @@ const getCoursesWithStats = async (filters = {}) => {
   const params = [];
 
   if (filters.q) {
-    where.push("(c.course_name LIKE ? OR c.description LIKE ?)");
+    where.push(
+      "(c.course_name LIKE ? OR c.description LIKE ? OR c.category LIKE ? OR c.level LIKE ? OR c.language LIKE ?)"
+    );
     const term = `%${filters.q}%`;
-    params.push(term, term);
+    params.push(term, term, term, term, term);
   }
 
   if (filters.category) {

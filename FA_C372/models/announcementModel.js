@@ -17,31 +17,50 @@ const ensureAnnouncementsTable = async () => {
   `);
 };
 
-const createAnnouncement = async ({ courseId, lecturerId, title, message }) => {
+const ensureRecipientCountColumn = async () => {
+  try {
+    await pool.query(
+      "ALTER TABLE course_announcements ADD COLUMN recipient_count INT NOT NULL DEFAULT 0"
+    );
+  } catch (err) {
+    if (err && err.code === "ER_DUP_FIELDNAME") return;
+    throw err;
+  }
+};
+
+const createAnnouncement = async ({ courseId, lecturerId, title, message, recipientCount = 0 }) => {
   const [result] = await pool.query(
-    `INSERT INTO course_announcements (course_id, lecturer_id, title, message)
-     VALUES (?, ?, ?, ?)`,
-    [courseId, lecturerId, title, message || null]
+    `INSERT INTO course_announcements (course_id, lecturer_id, title, message, recipient_count)
+     VALUES (?, ?, ?, ?, ?)`,
+    [courseId, lecturerId, title, message || null, Number(recipientCount || 0)]
   );
   return result.insertId;
 };
 
-const getAnnouncementsForLecturer = async (lecturerId, limit = 5) => {
+const getAnnouncementsForLecturer = async (lecturerId, limit = 5, courseId = null) => {
   const safeLimit = Math.max(1, Math.min(Number(limit) || 5, 20));
+  const where = ["a.lecturer_id = ?"];
+  const params = [lecturerId];
+  if (courseId) {
+    where.push("a.course_id = ?");
+    params.push(courseId);
+  }
+  params.push(safeLimit);
   const [rows] = await pool.query(
-    `SELECT a.id, a.course_id, c.course_name, a.title, a.message, a.created_at
+    `SELECT a.id, a.course_id, c.course_name, a.title, a.message, a.recipient_count, a.created_at
      FROM course_announcements a
      JOIN courses c ON c.id = a.course_id
-     WHERE a.lecturer_id = ?
+     WHERE ${where.join(" AND ")}
      ORDER BY a.created_at DESC
      LIMIT ?`,
-    [lecturerId, safeLimit]
+    params
   );
   return rows;
 };
 
 module.exports = {
   ensureAnnouncementsTable,
+  ensureRecipientCountColumn,
   createAnnouncement,
   getAnnouncementsForLecturer,
 };

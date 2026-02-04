@@ -71,8 +71,26 @@ const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
       throw new CheckoutError("already_enrolled", "All cart items are already enrolled.");
     }
 
-    const total = purchasable.reduce((sum, row) => {
-      return sum + Number(row.price || 0) * Number(row.quantity || 1);
+    // One cart line equals one course enrollment (quantity is fixed to 1).
+    const purchasableCourses = purchasable.map((item) => ({
+      ...item,
+      quantity: 1,
+    }));
+
+    // Support both limited-seat and unlimited-seat courses:
+    // - stock_qty > 0 => enforce availability
+    // - stock_qty <= 0 or null => treat as unlimited
+    for (const item of purchasableCourses) {
+      const qty = 1;
+      const stockQty = Number(item.stock_qty);
+      const hasLimitedStock = Number.isFinite(stockQty) && stockQty > 0;
+      if (hasLimitedStock && stockQty < qty) {
+        throw new CheckoutError("out_of_stock", "One or more courses are out of stock.");
+      }
+    }
+
+    const total = purchasableCourses.reduce((sum, row) => {
+      return sum + Number(row.price || 0);
     }, 0);
 
     if (paymentMethod === "wallet") {
@@ -97,11 +115,11 @@ const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
     );
     const orderId = orderResult.insertId;
 
-    for (const item of purchasable) {
+    for (const item of purchasableCourses) {
       await connection.query(
         `INSERT INTO order_items (order_id, course_id, unit_price, quantity)
          VALUES (?, ?, ?, ?)`,
-        [orderId, item.course_id, item.price, item.quantity]
+        [orderId, item.course_id, item.price, 1]
       );
 
       await connection.query(
@@ -114,12 +132,18 @@ const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
         [item.course_id, userId, item.course_id, userId]
       );
 
-      await connection.query(
+      const [stockUpdate] = await connection.query(
         `UPDATE courses
-         SET stock_qty = CASE WHEN stock_qty > 0 THEN stock_qty - 1 ELSE stock_qty END
-         WHERE id = ?`,
-        [item.course_id]
+         SET stock_qty = CASE
+           WHEN stock_qty > 0 THEN stock_qty - ?
+           ELSE stock_qty
+         END
+         WHERE id = ? AND (stock_qty <= 0 OR stock_qty >= ?)`,
+        [1, item.course_id, 1]
       );
+      if (!stockUpdate || Number(stockUpdate.affectedRows || 0) === 0) {
+        throw new CheckoutError("out_of_stock", "One or more courses are out of stock.");
+      }
     }
 
     await connection.query(

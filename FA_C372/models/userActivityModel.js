@@ -51,8 +51,31 @@ const getUserActivities = async (userId, limit = 50) => {
   return rows;
 };
 
+const getRecentActivities = async (limit = 20) => {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 200));
+  const [rows] = await pool.query(
+    `SELECT
+       l.id,
+       l.user_id,
+       l.actor_user_id,
+       l.activity_type,
+       l.ip_address,
+       l.details,
+       l.created_at,
+       u.name AS user_name,
+       a.name AS actor_name
+     FROM user_activity_logs l
+     LEFT JOIN users u ON u.id = l.user_id
+     LEFT JOIN users a ON a.id = l.actor_user_id
+     ORDER BY l.created_at DESC
+     LIMIT ${safeLimit}`
+  );
+  return rows;
+};
+
 module.exports = {
   ensureTable,
   logUserActivity,
   getUserActivities,
+  getRecentActivities,
 };

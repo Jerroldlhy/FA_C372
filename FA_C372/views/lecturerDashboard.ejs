@@ -68,9 +68,22 @@
           </div>
         <% } %>
 
+        <section class="dashboard-panel card shadow-sm mb-4">
+          <div class="card-body py-2">
+            <nav class="nav nav-pills gap-2 lecturer-subnav">
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerRevenue">Revenue</a>
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerCourses">Courses</a>
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerFeedback">Feedback</a>
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerAnnouncements">Announcements</a>
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerRoster">Roster</a>
+              <a class="btn btn-sm btn-outline-secondary" href="#lecturerAnalytics">Analytics</a>
+            </nav>
+          </div>
+        </section>
+
         <section class="row g-4">
           <div class="col-12">
-            <div class="card shadow-sm revenue-card">
+            <div class="card shadow-sm revenue-card" id="lecturerRevenue">
               <div class="card-body">
                 <div class="revenue-header">
                   <div class="revenue-title">
@@ -93,6 +106,10 @@
                     <strong>$<%= Number(revenueSummary?.totalRevenue || 0).toFixed(2) %></strong>
                   </div>
                   <div>
+                    <span>Pending payout (est.)</span>
+                    <strong>$<%= Number(pendingPayoutEstimate || 0).toFixed(2) %></strong>
+                  </div>
+                  <div>
                     <span>Orders processed</span>
                     <strong><%= revenueSummary?.orderCount || 0 %></strong>
                   </div>
@@ -101,6 +118,10 @@
                     <strong><%= revenueSummary?.courseCount || 0 %></strong>
                   </div>
                 </div>
+                <p class="text-muted small mt-2 mb-0">
+                  Last payout date:
+                  <strong><%= lastPayout ? new Date(lastPayout).toLocaleDateString() : "Not recorded yet" %></strong>
+                </p>
                 <% if (monthlyRevenue?.length) { %>
                   <div class="monthly-list mt-3">
                     <% monthlyRevenue.forEach(function(point) { %>
@@ -120,7 +141,7 @@
 
         <section class="row g-4 mt-1">
           <div class="col-lg-8">
-            <div class="card shadow-sm course-card">
+            <div class="card shadow-sm course-card" id="lecturerCourses">
               <div class="card-body">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-3">
                   <div>
@@ -206,17 +227,7 @@
                             </div>
                           </div>
                           <div class="row g-2 mt-2">
-                            <div class="col-4">
-                              <label class="form-label small">Stock</label>
-                              <input
-                                class="form-control form-control-sm"
-                                type="number"
-                                min="0"
-                                name="stock_qty"
-                                value="<%= course.stock_qty %>"
-                              />
-                            </div>
-                            <div class="col-8">
+                            <div class="col-12">
                               <label class="form-label small">Description</label>
                               <textarea
                                 class="form-control form-control-sm"
@@ -246,7 +257,64 @@
                 <% } %>
               </div>
             </div>
-            <div class="card shadow-sm trend-card mt-4">
+            <div class="card shadow-sm trend-card mt-4" id="lecturerFeedback">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Detailed student feedback</h5>
+                  <span class="text-muted small">Full reviews by course</span>
+                </div>
+                <% if (!courses.length) { %>
+                  <p class="text-muted small mb-0">Create and publish courses to start collecting feedback.</p>
+                <% } else { %>
+                  <div class="accordion" id="feedbackAccordion">
+                    <% courses.forEach(function(course, idx) { %>
+                      <% const courseReviews = reviewsByCourse && reviewsByCourse[course.id] ? reviewsByCourse[course.id] : []; %>
+                      <div class="accordion-item mb-2">
+                        <h2 class="accordion-header" id="feedbackHeading_<%= course.id %>">
+                          <button
+                            class="accordion-button <%= idx === 0 ? '' : 'collapsed' %>"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#feedbackCollapse_<%= course.id %>"
+                            aria-expanded="<%= idx === 0 ? 'true' : 'false' %>"
+                            aria-controls="feedbackCollapse_<%= course.id %>"
+                          >
+                            <span class="me-2"><%= course.course_name %></span>
+                            <span class="text-muted small">(<%= courseReviews.length %> review<%= courseReviews.length === 1 ? '' : 's' %>)</span>
+                          </button>
+                        </h2>
+                        <div
+                          id="feedbackCollapse_<%= course.id %>"
+                          class="accordion-collapse collapse <%= idx === 0 ? 'show' : '' %>"
+                          aria-labelledby="feedbackHeading_<%= course.id %>"
+                          data-bs-parent="#feedbackAccordion"
+                        >
+                          <div class="accordion-body">
+                            <% if (!courseReviews.length) { %>
+                              <p class="text-muted small mb-0">No reviews for this course yet.</p>
+                            <% } else { %>
+                              <ul class="list-group list-group-flush">
+                                <% courseReviews.forEach(function(review) { %>
+                                  <li class="list-group-item px-0 py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                      <strong><%= review.student_name || "Student" %></strong>
+                                      <span class="text-muted small"><%= review.created_at ? new Date(review.created_at).toLocaleDateString() : "" %></span>
+                                    </div>
+                                    <p class="text-muted small mb-1">Rating: <%= Number(review.rating || 0).toFixed(1) %>/5</p>
+                                    <p class="mb-0"><%= review.review || "No written feedback." %></p>
+                                  </li>
+                                <% }); %>
+                              </ul>
+                            <% } %>
+                          </div>
+                        </div>
+                      </div>
+                    <% }); %>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+            <div class="card shadow-sm trend-card mt-4" id="lecturerAnalytics">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h5 class="card-title mb-0">Completion trend</h5>
@@ -260,6 +328,26 @@
                       <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
                         <span><%= point.period %></span>
                         <strong><%= Number(point.avg_progress || 0).toFixed(1) %>%</strong>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+            <div class="card shadow-sm trend-card mt-4">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Enrollment growth</h5>
+                  <span class="text-muted small">New learners per month</span>
+                </div>
+                <% if (!enrollmentTrend || !enrollmentTrend.length) { %>
+                  <p class="text-muted small mb-0">Enrollment trend appears after students start joining courses.</p>
+                <% } else { %>
+                  <ul class="list-group list-group-flush">
+                    <% enrollmentTrend.forEach(function(point) { %>
+                      <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><%= point.period %></span>
+                        <strong><%= Number(point.enrollment_count || 0) %></strong>
                       </li>
                     <% }); %>
                   </ul>
@@ -299,17 +387,34 @@
                     <label class="form-label small" for="description">Description</label>
                     <textarea class="form-control form-control-sm" id="description" name="description" rows="2"></textarea>
                   </div>
-                  <div class="mb-3">
-                    <label class="form-label small" for="stock_qty">Stock quantity</label>
-                    <input class="form-control form-control-sm" id="stock_qty" name="stock_qty" type="number" min="0" value="0" />
-                  </div>
                   <button type="submit" class="btn btn-gradient w-100">Publish course</button>
                 </form>
               </div>
             </div>
-            <div class="card shadow-sm announcement-card mt-4">
+            <div class="card shadow-sm announcement-card mt-4" id="lecturerAnnouncements">
               <div class="card-body">
                 <h5 class="card-title mb-3">Recent announcements</h5>
+                <form class="row g-2 mb-3" method="GET" action="/dashboard/lecturer">
+                  <div class="col-12">
+                    <label class="form-label small mb-1">Filter by course</label>
+                    <select class="form-select form-select-sm" name="announcement_course">
+                      <option value="">All courses</option>
+                      <% courses.forEach(function(course) { %>
+                        <option value="<%= course.id %>" <%= Number(announcementFilters?.courseId || 0) === Number(course.id) ? "selected" : "" %>>
+                          <%= course.course_name %>
+                        </option>
+                      <% }); %>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small mb-1">Search text</label>
+                    <input class="form-control form-control-sm" name="announcement_q" value="<%= announcementFilters?.q || '' %>" placeholder="Title or message" />
+                  </div>
+                  <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">Apply</button>
+                    <a class="btn btn-sm btn-outline-secondary" href="/dashboard/lecturer">Reset</a>
+                  </div>
+                </form>
                 <% if (!announcements.length) { %>
                   <p class="text-muted small mb-0">No announcements have been sent yet.</p>
                 <% } else { %>
@@ -322,12 +427,13 @@
                             <%= new Date(note.created_at).toLocaleDateString() %>
                           </span>
                         </div>
-                        <p class="text-muted small mb-0">
-                          <%= note.course_name %>
-                        </p>
-                        <% if (note.message) { %>
-                          <p class="text-muted small mb-0 text-truncate"><%= note.message %></p>
-                        <% } %>
+                          <p class="text-muted small mb-0">
+                            <%= note.course_name %>
+                          </p>
+                          <p class="text-muted small mb-0">Recipients: <%= Number(note.recipient_count || 0) %></p>
+                          <% if (note.message) { %>
+                            <p class="text-muted small mb-0 text-truncate"><%= note.message %></p>
+                          <% } %>
                       </li>
                     <% }); %>
                   </ul>
@@ -339,11 +445,25 @@
 
         <section class="row g-4 mt-3">
           <div class="col-12">
-            <div class="card shadow-sm roster-card">
+            <div class="card shadow-sm roster-card" id="lecturerRoster">
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <h5 class="card-title mb-0">Learner roster & messaging</h5>
                   <span class="text-muted small">Send course-specific announcements</span>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-12 col-md-6">
+                    <input class="form-control form-control-sm" id="rosterSearch" placeholder="Search learner name or email" />
+                  </div>
+                  <div class="col-12 col-md-3">
+                    <select class="form-select form-select-sm" id="rosterSort">
+                      <option value="progress_desc">Sort: Progress (high-low)</option>
+                      <option value="progress_asc">Sort: Progress (low-high)</option>
+                      <option value="date_desc">Sort: Newest enrollments</option>
+                      <option value="date_asc">Sort: Oldest enrollments</option>
+                      <option value="name_asc">Sort: Name (A-Z)</option>
+                    </select>
+                  </div>
                 </div>
                 <% if (!rosterList.length) { %>
                   <p class="text-muted small mb-0">Add a course to begin inviting learners.</p>
@@ -352,17 +472,25 @@
                     <div class="roster-section mb-4">
                       <div class="d-flex justify-content-between align-items-center mb-2">
                         <strong><%= courseRoster.courseName %></strong>
-                        <span class="text-muted small"><%= courseRoster.students.length %> learner(s)</span>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="text-muted small"><%= courseRoster.students.length %> learner(s)</span>
+                          <a class="btn btn-sm btn-outline-secondary" href="/dashboard/lecturer/courses/<%= courseRoster.courseId %>/roster/export">Export CSV</a>
+                        </div>
                       </div>
                       <% if (!courseRoster.students.length) { %>
                         <p class="text-muted small mb-3">No learners enrolled yet.</p>
                       <% } else { %>
-                        <ul class="list-group list-group-flush mb-3">
+                        <ul class="list-group list-group-flush mb-3 roster-list" data-course-id="<%= courseRoster.courseId %>">
                           <% courseRoster.students.forEach(function(student) { %>
-                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center roster-student"
+                              data-search="<%= String(student.student_name || '').toLowerCase() %> <%= String(student.email || '').toLowerCase() %>"
+                              data-progress="<%= Number(student.progress || 0) %>"
+                              data-enrolled-at="<%= student.enrolled_at ? new Date(student.enrolled_at).getTime() : 0 %>"
+                              data-name="<%= String(student.student_name || '').toLowerCase() %>">
                               <div>
                                 <strong><%= student.student_name %></strong>
                                 <p class="text-muted small mb-0"><%= student.email %></p>
+                                <p class="text-muted small mb-0">Enrolled: <%= student.enrolled_at ? new Date(student.enrolled_at).toLocaleDateString() : "-" %></p>
                               </div>
                               <div class="text-end">
                                 <span class="text-muted small d-block">Progress</span>
@@ -392,6 +520,52 @@
             </div>
           </div>
         </section>
+        <section class="row g-4 mt-1">
+          <div class="col-lg-6">
+            <div class="card shadow-sm trend-card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Course leaderboard</h5>
+                  <span class="text-muted small">Top performers by revenue</span>
+                </div>
+                <% if (!topCourses || !topCourses.length) { %>
+                  <p class="text-muted small mb-0">Leaderboard appears once your courses receive purchases.</p>
+                <% } else { %>
+                  <ul class="list-group list-group-flush">
+                    <% topCourses.forEach(function(course, index) { %>
+                      <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><%= index + 1 %>. <%= course.course_name %></span>
+                        <strong>$<%= Number(course.revenue || 0).toFixed(2) %></strong>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card shadow-sm trend-card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="card-title mb-0">Rating distribution</h5>
+                  <span class="text-muted small">Rounded ratings by course</span>
+                </div>
+                <% if (!ratingDistribution || !ratingDistribution.length) { %>
+                  <p class="text-muted small mb-0">Ratings will appear after students submit reviews.</p>
+                <% } else { %>
+                  <ul class="list-group list-group-flush">
+                    <% ratingDistribution.forEach(function(bucket) { %>
+                      <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><%= bucket.rating %> star</span>
+                        <strong><%= Number(bucket.count || 0) %> course(s)</strong>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
     <script
@@ -399,5 +573,65 @@
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
       crossorigin="anonymous"
     ></script>
+    <script>
+      (function () {
+        const rosterSearch = document.getElementById("rosterSearch");
+        const rosterSort = document.getElementById("rosterSort");
+        const studentRows = Array.from(document.querySelectorAll(".roster-student"));
+        if (!studentRows.length) return;
+
+        const sortRows = (mode) => {
+          const lists = Array.from(document.querySelectorAll(".roster-list"));
+          lists.forEach((list) => {
+            const items = Array.from(list.querySelectorAll(".roster-student"));
+            items.sort((a, b) => {
+              const pa = Number(a.getAttribute("data-progress") || 0);
+              const pb = Number(b.getAttribute("data-progress") || 0);
+              const ta = Number(a.getAttribute("data-enrolled-at") || 0);
+              const tb = Number(b.getAttribute("data-enrolled-at") || 0);
+              const na = String(a.getAttribute("data-name") || "");
+              const nb = String(b.getAttribute("data-name") || "");
+              if (mode === "progress_asc") return pa - pb;
+              if (mode === "progress_desc") return pb - pa;
+              if (mode === "date_asc") return ta - tb;
+              if (mode === "date_desc") return tb - ta;
+              return na.localeCompare(nb);
+            });
+            items.forEach((item) => list.appendChild(item));
+          });
+        };
+
+        const applyFilter = () => {
+          const q = String((rosterSearch && rosterSearch.value) || "").trim().toLowerCase();
+          studentRows.forEach((row) => {
+            const text = String(row.getAttribute("data-search") || "");
+            row.style.display = !q || text.includes(q) ? "" : "none";
+          });
+        };
+
+        if (rosterSort) {
+          rosterSort.addEventListener("change", () => sortRows(rosterSort.value));
+          sortRows(rosterSort.value);
+        }
+        if (rosterSearch) {
+          rosterSearch.addEventListener("input", applyFilter);
+        }
+
+        const createForm = document.querySelector(".creation-card form");
+        if (createForm) {
+          createForm.addEventListener("submit", function (event) {
+            const title = (createForm.querySelector("[name='course_name']")?.value || "").trim();
+            const price = Number(createForm.querySelector("[name='price']")?.value || 0);
+            if (!title || !Number.isFinite(price) || price < 0) {
+              event.preventDefault();
+              alert("Please provide a valid course title and price.");
+              return;
+            }
+            const ok = confirm("Publish this course now?");
+            if (!ok) event.preventDefault();
+          });
+        }
+      })();
+    </script>
   </body>
 </html>

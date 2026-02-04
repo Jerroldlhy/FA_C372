@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Sales Report</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="admin-dashboard">
+    <%- include("partials/navbar") %>
+    <main class="admin-main">
+      <section class="hero-intro mb-4">
+        <div>
+          <p class="eyebrow text-uppercase text-muted mb-1">Analytics</p>
+          <h1 class="display-6 fw-bold mb-1">Sales Report</h1>
+          <p class="lead text-muted mb-0">
+            Date range: <strong><%= filters.from || "All" %></strong> to <strong><%= filters.to || "All" %></strong>
+          </p>
+        </div>
+        <div class="hero-cta">
+          <a class="btn btn-outline-primary" href="/admin/reports/sales/export?format=csv&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export CSV</a>
+          <a class="btn btn-primary" href="/admin/reports/sales/export?format=pdf&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export PDF</a>
+          <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
+        </div>
+      </section>
+      <section class="dashboard-panel card shadow-sm mb-4">
+        <div class="card-body">
+          <form method="GET" action="/admin/reports/sales" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+              <label class="form-label small" for="report_from">From</label>
+              <input class="form-control form-control-sm" id="report_from" name="from" type="date" value="<%= filters.from || '' %>" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label small" for="report_to">To</label>
+              <input class="form-control form-control-sm" id="report_to" name="to" type="date" value="<%= filters.to || '' %>" />
+            </div>
+            <div class="col-12 col-md-2 d-grid">
+              <button class="btn btn-outline-secondary btn-sm" type="submit">Apply</button>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="reportToday">Today</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="report7d">Last 7 days</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="reportAll">All</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+        <article class="stat-card col">
+          <p class="stat-label">Total Orders</p>
+          <p class="stat-value"><%= Number(summary.totalOrders || 0) %></p>
+        </article>
+        <article class="stat-card col">
+          <p class="stat-label">Courses Sold</p>
+          <p class="stat-value"><%= Number(summary.totalItems || 0) %></p>
+        </article>
+        <article class="stat-card col">
+          <p class="stat-label">Revenue (USD)</p>
+          <p class="stat-value">$<%= Number(summary.totalRevenue || 0).toFixed(2) %></p>
+        </article>
+      </section>
+
+      <section class="dashboard-panel card shadow-sm mb-4">
+        <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Top Courses</h2>
+          <span class="text-muted small">Top 5 by revenue</span>
+        </div>
+        <% if (!summary.topCourses || !summary.topCourses.length) { %>
+          <div class="empty-state">No paid sales found for this date range.</div>
+        <% } else { %>
+          <div class="table-responsive">
+            <table class="table table-borderless align-middle admin-table mb-0">
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th>Quantity</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% summary.topCourses.forEach(function(item) { %>
+                  <tr>
+                    <td><%= item.courseName %></td>
+                    <td><%= Number(item.quantity || 0) %></td>
+                    <td>$<%= Number(item.revenue || 0).toFixed(2) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="dashboard-panel card shadow-sm">
+        <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Sales Line Items</h2>
+          <span class="text-muted small"><%= report.length %> records</span>
+        </div>
+        <% if (!report || !report.length) { %>
+          <div class="empty-state">No report records available for selected range.</div>
+        <% } else { %>
+          <div class="table-responsive">
+            <table class="table table-borderless align-middle admin-table mb-0">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th>User</th>
+                  <th>Course</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                  <th>Line Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% report.forEach(function(row) { %>
+                  <tr>
+                    <td>#<%= row.order_id %></td>
+                    <td><%= row.created_at ? new Date(row.created_at).toLocaleString() : "" %></td>
+                    <td>
+                      <div><%= row.user_name %></div>
+                      <div class="text-muted small"><%= row.user_email %></div>
+                    </td>
+                    <td><%= row.course_name %></td>
+                    <td><%= Number(row.quantity || 0) %></td>
+                    <td>$<%= Number(row.unit_price || 0).toFixed(2) %></td>
+                    <td>$<%= Number(row.line_total || 0).toFixed(2) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+    </main>
+    <script>
+      (function () {
+        const from = document.getElementById("report_from");
+        const to = document.getElementById("report_to");
+        const todayBtn = document.getElementById("reportToday");
+        const weekBtn = document.getElementById("report7d");
+        const allBtn = document.getElementById("reportAll");
+        if (!from || !to) return;
+
+        const format = (d) => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        };
+
+        if (todayBtn) {
+          todayBtn.addEventListener("click", () => {
+            const t = new Date();
+            const v = format(t);
+            from.value = v;
+            to.value = v;
+          });
+        }
+        if (weekBtn) {
+          weekBtn.addEventListener("click", () => {
+            const t = new Date();
+            const start = new Date(t);
+            start.setDate(t.getDate() - 6);
+            from.value = format(start);
+            to.value = format(t);
+          });
+        }
+        if (allBtn) {
+          allBtn.addEventListener("click", () => {
+            from.value = "";
+            to.value = "";
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

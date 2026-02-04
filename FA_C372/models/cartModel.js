@@ -17,8 +17,8 @@ const addItemToCart = async (userId, courseId, quantity = 1) => {
   await pool.query(
     `INSERT INTO cart_items (cart_id, course_id, quantity)
      VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)`,
-    [cartId, courseId, quantity]
+     ON DUPLICATE KEY UPDATE quantity = 1`,
+    [cartId, courseId, 1]
   );
 };
 
@@ -35,24 +35,9 @@ const removeItemFromCart = async (userId, courseId) => {
   ]);
 };
 
-const updateItemQuantity = async (userId, courseId, quantity) => {
-  const [rows] = await pool.query(
-    "SELECT id FROM carts WHERE user_id = ? LIMIT 1",
-    [userId]
-  );
-  const cartId = rows[0]?.id;
-  if (!cartId) return false;
-
-  const [result] = await pool.query(
-    "UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND course_id = ?",
-    [quantity, cartId, courseId]
-  );
-  return result.affectedRows > 0;
-};
-
 const getCartItemsForUser = async (userId) => {
   const [rows] = await pool.query(
-    `SELECT ci.id, ci.course_id, ci.quantity,
+    `SELECT ci.id, ci.course_id, 1 AS quantity,
             c.course_name, c.price, c.category, c.level, c.language,
             u.name AS instructor_name
      FROM carts ca
@@ -80,7 +65,6 @@ module.exports = {
   getOrCreateCartId,
   addItemToCart,
   removeItemFromCart,
-  updateItemQuantity,
   getCartItemsForUser,
   clearCartByUser,
 };

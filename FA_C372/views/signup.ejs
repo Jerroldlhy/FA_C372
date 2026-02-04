@@ -26,15 +26,15 @@
         <% if (error) { %>
           <div class="auth-alert"><%= error %></div>
         <% } %>
-        <form method="POST" action="/signup" class="auth-form" novalidate>
+        <form method="POST" action="/signup" class="auth-form">
           <div class="auth-grid">
             <label>
               First Name
-              <input type="text" name="first_name" placeholder="John" required />
+              <input type="text" name="first_name" placeholder="John" minlength="2" maxlength="60" required />
             </label>
             <label>
               Last Name
-              <input type="text" name="last_name" placeholder="Doe" required />
+              <input type="text" name="last_name" placeholder="Doe" minlength="2" maxlength="60" required />
             </label>
           </div>
           <label>
@@ -53,11 +53,12 @@
                 type="password"
                 name="password"
                 placeholder="Create a strong password"
+                minlength="6"
                 required
               />
               <span class="eye-icon"></span>
             </div>
-            <small>Must be at least 8 characters with numbers and letters</small>
+            <small>Must be at least 6 characters.</small>
           </label>
           <label class="checkbox-row">
             <input type="checkbox" required />

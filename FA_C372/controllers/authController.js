@@ -174,8 +174,8 @@ const resetPassword = async (req, res, next) => {
     if (!token) {
       return res.render("resetPassword", { error: "Invalid reset request.", token: null });
     }
-    if (!password || password.length < 8) {
-      return res.render("resetPassword", { error: "Password must be at least 8 characters.", token });
+    if (!password || password.length < 6) {
+      return res.render("resetPassword", { error: "Password must be at least 6 characters.", token });
     }
     if (password !== confirmPassword) {
       return res.render("resetPassword", { error: "Passwords do not match.", token });

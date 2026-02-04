@@ -43,6 +43,14 @@
           </form>
         </div>
       </section>
+      <section class="dashboard-panel card shadow-sm mb-4">
+        <div class="card-body d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/sales">View sales report</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#add-course-form">Add new course</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#users-panel">Manage users</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#courses-panel">Manage courses</a>
+        </div>
+      </section>
 
       <% if (status && status.course_created) { %>
         <div class="alert alert-success">Course created.</div>
@@ -79,6 +87,21 @@
       <% if (status && status.user === "not_found") { %>
         <div class="alert alert-danger">User not found.</div>
       <% } %>
+      <% if (status && status.report_error === "invalid_from_date") { %>
+        <div class="alert alert-danger">Invalid report start date.</div>
+      <% } %>
+      <% if (status && status.report_error === "invalid_to_date") { %>
+        <div class="alert alert-danger">Invalid report end date.</div>
+      <% } %>
+      <% if (status && status.report_error === "invalid_date_range") { %>
+        <div class="alert alert-danger">Report date range is invalid.</div>
+      <% } %>
+      <% if (status && status.report_error === "invalid_format") { %>
+        <div class="alert alert-danger">Unsupported report format selected.</div>
+      <% } %>
+      <% if (status && status.report_error === "pdfkit_missing") { %>
+        <div class="alert alert-warning">PDF export dependency is missing. Run npm install to install project dependencies.</div>
+      <% } %>
 
       <section class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
         <article class="stat-card col">
@@ -103,8 +126,113 @@
         </article>
       </section>
 
+      <% const fraudData = fraudSummary || { low: 0, medium: 0, high: 0, total: 0 }; %>
+      <section class="dashboard-panel card shadow-sm mb-4">
+        <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h2 class="h5 mb-0">Fraud & AML Monitor</h2>
+            <p class="text-muted small mb-0">Risk events captured in the last 24 hours.</p>
+          </div>
+          <span class="text-muted small"><%= fraudData.total %> total events</span>
+        </div>
+        <div class="row row-cols-1 row-cols-md-3 g-2 mb-3">
+          <div class="col">
+            <div class="stat-card h-100">
+              <p class="stat-label">Low severity</p>
+              <p class="stat-value"><%= fraudData.low %></p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card h-100">
+              <p class="stat-label">Medium severity</p>
+              <p class="stat-value"><%= fraudData.medium %></p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card h-100">
+              <p class="stat-label">High severity</p>
+              <p class="stat-value"><%= fraudData.high %></p>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-borderless align-middle admin-table mb-0">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Rule</th>
+                <th>Severity</th>
+                <th>Flags</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!recentFraudEvents || recentFraudEvents.length === 0) { %>
+                <tr>
+                  <td colspan="5" class="text-muted small text-center">No fraud events logged yet.</td>
+                </tr>
+              <% } else { %>
+                <% recentFraudEvents.forEach(function (evt) { %>
+                  <% const flags = Array.isArray(evt.details?.flags) ? evt.details.flags.join(", ") : ""; %>
+                  <tr>
+                    <td><%= evt.created_at ? new Date(evt.created_at).toLocaleString() : "" %></td>
+                    <td>
+                      <%= evt.user_name || "Unknown user" %>
+                      <% if (evt.user_email) { %>
+                        <div class="text-muted small"><%= evt.user_email %></div>
+                      <% } %>
+                    </td>
+                    <td><%= evt.rule_code || "ok" %></td>
+                    <td class="text-capitalize"><%= evt.severity || "low" %></td>
+                    <td class="text-muted small"><%= flags || "-" %></td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="dashboard-panel card shadow-sm mb-4">
+        <div class="panel-header mb-3">
+          <h2 class="h5 mb-0">Sales Report Export</h2>
+          <p class="text-muted small mb-0">Filter by date range and export as CSV or PDF.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="reportRangeToday">Today</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="reportRange7d">Last 7 days</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="reportRangeAll">All dates</button>
+        </div>
+        <form method="GET" action="/admin/reports/sales" class="row g-3">
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="report_from">From</label>
+            <input class="form-control" id="report_from" name="from" type="date" value="<%= status?.from || '' %>" />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label" for="report_to">To</label>
+            <input class="form-control" id="report_to" name="to" type="date" value="<%= status?.to || '' %>" />
+          </div>
+          <div class="col-12 col-md-2 d-grid">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-outline-secondary" type="submit">View Report</button>
+          </div>
+          <div class="col-12 col-md-2 d-grid">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-outline-primary" type="submit" formaction="/admin/reports/sales/export" name="format" value="csv">
+              Export CSV
+            </button>
+          </div>
+          <div class="col-12 col-md-2 d-grid">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-primary" type="submit" formaction="/admin/reports/sales/export" name="format" value="pdf">
+              Export PDF
+            </button>
+          </div>
+        </form>
+      </section>
+
       <div class="row g-4">
-        <section class="col-12 col-xl-6">
+        <section class="col-12 col-xl-6" id="users-panel">
           <div class="dashboard-panel card shadow-sm">
             <div class="panel-header d-flex justify-content-between align-items-center mb-3">
               <h2 class="h5 mb-0">Registered Users</h2>
@@ -112,8 +240,11 @@
                 <%= totalUsers %> profiles
               </span>
             </div>
+            <div class="mb-3">
+              <input class="form-control form-control-sm" id="adminUserSearch" placeholder="Search by name, email, role, status or ID" />
+            </div>
             <div class="table-responsive">
-              <table class="table table-borderless align-middle mb-0 admin-table">
+              <table class="table table-borderless align-middle mb-0 admin-table" id="adminUsersTable">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -165,7 +296,7 @@
           </div>
         </section>
 
-        <section class="col-12 col-xl-6">
+        <section class="col-12 col-xl-6" id="add-course-form">
           <div class="dashboard-panel card shadow-sm">
             <div class="panel-header mb-3">
               <h2 class="h5 mb-0">Add a Course</h2>
@@ -209,14 +340,13 @@
                 ></textarea>
               </div>
               <div class="col-12">
-                <label class="form-label" for="instructor_id">Instructor ID</label>
-                <input
-                  class="form-control"
-                  id="instructor_id"
-                  name="instructor_id"
-                  type="number"
-                  min="1"
-                />
+                <label class="form-label" for="instructor_id">Instructor</label>
+                <select class="form-select js-enhance-select" id="instructor_id" name="instructor_id">
+                  <option value="">Unassigned</option>
+                  <% (lecturers || []).forEach(function (lecturer) { %>
+                    <option value="<%= lecturer.id %>"><%= lecturer.name %> (ID <%= lecturer.id %>)</option>
+                  <% }); %>
+                </select>
               </div>
               <div class="col-12">
                 <button class="btn btn-gradient w-100" type="submit">
@@ -228,12 +358,15 @@
         </section>
       </div>
 
-      <section class="dashboard-panel card shadow-sm mt-3">
+      <section class="dashboard-panel card shadow-sm mt-3" id="courses-panel">
         <div class="panel-header d-flex justify-content-between align-items-center mb-3">
           <h2 class="h5 mb-0">Manage Courses</h2>
           <span class="text-muted small">
             <%= totalCourses %> active listings
           </span>
+        </div>
+        <div class="mb-3">
+          <input class="form-control form-control-sm" id="adminCourseSearch" placeholder="Search by course name, category or lecturer" />
         </div>
         <% if (!courses || courses.length === 0) { %>
           <div class="empty-state text-center">
@@ -242,7 +375,7 @@
         <% } else { %>
           <div class="course-grid">
             <% courses.forEach(function (course) { %>
-              <article class="course-card admin-course-card">
+              <article class="course-card admin-course-card" data-course-search="<%= String(course.course_name || '') %> <%= String(course.category || '') %> <%= String(course.instructor_name || '') %>">
               <div class="course-card-header d-flex justify-content-between align-items-center">
                 <div>
                   <span class="text-muted small">ID #<%= course.id %></span>
@@ -292,7 +425,7 @@
                   </label>
                   <label>
                     Lecturer
-                    <select class="form-select form-select-sm" name="instructor_id">
+                    <select class="form-select form-select-sm js-enhance-select" name="instructor_id">
                       <option value="">Unassigned</option>
                       <% (lecturers || []).forEach(function (lecturer) { %>
                         <option
@@ -325,6 +458,43 @@
             <% }); %>
           </div>
         <% } %>
+      </section>
+
+      <section class="dashboard-panel card shadow-sm mt-3">
+        <div class="panel-header d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Recent Admin Activity</h2>
+          <span class="text-muted small"><%= (recentActivities || []).length %> records</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-borderless align-middle admin-table mb-0">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>User</th>
+                <th>Activity</th>
+                <th>Actor</th>
+                <th>IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!recentActivities || recentActivities.length === 0) { %>
+                <tr>
+                  <td colspan="5" class="text-muted small text-center">No activity logs yet.</td>
+                </tr>
+              <% } else { %>
+                <% recentActivities.forEach(function (item) { %>
+                  <tr>
+                    <td><%= item.created_at ? new Date(item.created_at).toLocaleString() : "" %></td>
+                    <td><%= item.user_name || ("User #" + item.user_id) %></td>
+                    <td class="text-capitalize"><%= String(item.activity_type || "").replace(/_/g, " ") %></td>
+                    <td><%= item.actor_name || (item.actor_user_id ? ("User #" + item.actor_user_id) : "-") %></td>
+                    <td><%= item.ip_address || "-" %></td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="dashboard-panel card shadow-sm mt-3">
@@ -393,6 +563,67 @@
       crossorigin="anonymous"
     ></script>
     <script>
+      function toInputDate(dateObj) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const day = String(dateObj.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      const fromInput = document.getElementById("report_from");
+      const toInput = document.getElementById("report_to");
+      const btnToday = document.getElementById("reportRangeToday");
+      const btn7d = document.getElementById("reportRange7d");
+      const btnAll = document.getElementById("reportRangeAll");
+
+      if (btnToday && fromInput && toInput) {
+        btnToday.addEventListener("click", () => {
+          const today = new Date();
+          const value = toInputDate(today);
+          fromInput.value = value;
+          toInput.value = value;
+        });
+      }
+      if (btn7d && fromInput && toInput) {
+        btn7d.addEventListener("click", () => {
+          const today = new Date();
+          const start = new Date(today);
+          start.setDate(today.getDate() - 6);
+          fromInput.value = toInputDate(start);
+          toInput.value = toInputDate(today);
+        });
+      }
+      if (btnAll && fromInput && toInput) {
+        btnAll.addEventListener("click", () => {
+          fromInput.value = "";
+          toInput.value = "";
+        });
+      }
+
+      const userSearch = document.getElementById("adminUserSearch");
+      const userRows = Array.from(document.querySelectorAll("#adminUsersTable tbody tr.user-row"));
+      if (userSearch && userRows.length) {
+        userSearch.addEventListener("input", () => {
+          const q = String(userSearch.value || "").trim().toLowerCase();
+          userRows.forEach((row) => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = !q || text.includes(q) ? "" : "none";
+          });
+        });
+      }
+
+      const courseSearch = document.getElementById("adminCourseSearch");
+      const courseCards = Array.from(document.querySelectorAll(".admin-course-card"));
+      if (courseSearch && courseCards.length) {
+        courseSearch.addEventListener("input", () => {
+          const q = String(courseSearch.value || "").trim().toLowerCase();
+          courseCards.forEach((card) => {
+            const text = String(card.getAttribute("data-course-search") || "").toLowerCase();
+            card.style.display = !q || text.includes(q) ? "" : "none";
+          });
+        });
+      }
+
       document.querySelectorAll(".user-row").forEach((row) => {
         row.addEventListener("click", (event) => {
           if (event.target.closest("button, a, select, input, form, textarea, label")) return;

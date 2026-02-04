@@ -59,11 +59,17 @@
         <div class="course-hero courses-hero mb-4">
           <div>
             <p class="eyebrow text-uppercase text-muted mb-2">Course Hub</p>
-            <h1 class="display-5 fw-bold mb-2">Browse and manage every course</h1>
+            <h1 class="display-5 fw-bold mb-2">Browse courses</h1>
             <p class="lead text-muted">
               Explore all available courses, then narrow down by topic, level,
               language, or price in one place.
             </p>
+            <% if (currentUser && currentUser.role === "student") { %>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="btn btn-outline btn-sm" href="/cart">Go to cart</a>
+                <a class="btn btn-outline btn-sm" href="/learning">My learning</a>
+              </div>
+            <% } %>
           </div>
         </div>
 
@@ -165,13 +171,11 @@
           </div>
         </div>
 
+        <% const isStudentPage = currentUser && currentUser.role === "student"; %>
         <div class="row g-4">
-          <div class="col-12 col-lg-8">
+          <div class="<%= isStudentPage ? 'col-12 col-lg-8' : 'col-12' %>">
             <div class="course-list" id="courseList">
               <% courses.forEach(function (course) { %>
-                <% const isOwnCourse = currentUser && course.instructor_id === currentUser.id; %>
-                <% const isLecturer = currentUser && currentUser.role === "lecturer"; %>
-                <% const isAdmin = currentUser && currentUser.role === "admin"; %>
                 <% const isStudent = currentUser && currentUser.role === "student"; %>
                 <% const enrolled = enrolledCourseIds.includes(course.id); %>
                 <% const inCart = cartCourseIds.includes(course.id); %>
@@ -288,179 +292,17 @@
                     <% } %>
                   <% } %>
 
-                  <% if (isLecturer || isAdmin) { %>
-                    <% const canManage = isAdmin || isOwnCourse; %>
-                    <% if (canManage) { %>
-                      <div class="course-actions">
-                        <details class="course-editor">
-                          <summary>Manage course</summary>
-                          <form
-                            class="mt-3"
-                            method="POST"
-                            action="/courses/<%= course.id %>/update"
-                          >
-                            <div class="row g-2">
-                              <div class="col-6">
-                                <input
-                                  class="form-control form-control-sm"
-                                  name="course_name"
-                                  value="<%= course.course_name %>"
-                                  required
-                                />
-                              </div>
-                              <div class="col-6">
-                                <input
-                                  class="form-control form-control-sm"
-                                  name="price"
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value="<%= Number(course.price).toFixed(2) %>"
-                                  required
-                                />
-                              </div>
-                              <div class="col-12">
-                                <textarea
-                                  class="form-control form-control-sm"
-                                  name="description"
-                                  rows="2"
-                                ><%= course.description || "" %></textarea>
-                              </div>
-                              <div class="col-4">
-                                <input class="form-control form-control-sm" name="level" placeholder="Level" value="<%= course.level || '' %>" />
-                              </div>
-                              <div class="col-4">
-                                <input class="form-control form-control-sm" name="language" placeholder="Language" value="<%= course.language || '' %>" />
-                              </div>
-                              <div class="col-4">
-                                <input class="form-control form-control-sm" name="stock_qty" type="number" min="0" placeholder="Stock" value="<%= Number(course.stock_qty || 0) %>" />
-                              </div>
-                              <% if (isAdmin) { %>
-                                <div class="col-12">
-                                  <select
-                                    class="form-select form-select-sm"
-                                    name="instructor_id"
-                                  >
-                                    <option value="">Assign instructor</option>
-                                    <% lecturers.forEach(function (lect) { %>
-                                      <option
-                                        value="<%= lect.id %>"
-                                        <%= course.instructor_id === lect.id ? "selected" : "" %>
-                                      >
-                                        <%= lect.name %>
-                                      </option>
-                                    <% }); %>
-                                  </select>
-                                </div>
-                              <% } %>
-                              <div class="col-12 d-flex gap-2">
-                                <button class="btn btn-sm btn-outline-primary" type="submit">
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          </form>
-                          <form
-                            method="POST"
-                            action="/courses/<%= course.id %>/delete"
-                            class="course-delete mt-3 text-end"
-                            onsubmit="return confirm('Delete this course?');"
-                          >
-                            <button class="btn btn-sm btn-outline-danger" type="submit">
-                              Delete
-                            </button>
-                          </form>
-                        </details>
-                      </div>
-                    <% } %>
-                  <% } %>
                 </article>
               <% }); %>
             </div>
             <div class="course-empty mt-3" id="courseEmptyState">
-              No courses match your current filters.
+              <div id="courseEmptyMessage">No courses match your current filters.</div>
+              <button class="btn btn-sm btn-outline-secondary mt-2" type="button" id="emptyStateResetBtn">Reset filters</button>
             </div>
           </div>
 
-          <div class="col-12 col-lg-4">
-            <% const isLecturer = currentUser && currentUser.role === "lecturer"; %>
-            <% const isAdmin = currentUser && currentUser.role === "admin"; %>
-            <% const isStudent = currentUser && currentUser.role === "student"; %>
-            <% if (isLecturer || isAdmin) { %>
-              <div class="dashboard-panel card mb-4">
-                <div class="panel-header mb-3">
-                  <h5 class="card-title mb-0">Create a course</h5>
-                  <p class="text-muted small mb-0">
-                    <%= isLecturer ? "Your listing adds to the instructor catalog." : "Assign an instructor." %>
-                  </p>
-                </div>
-                <form method="POST" action="/courses">
-                  <div class="mb-3">
-                    <label class="form-label small" for="course_name">Course Name</label>
-                    <input class="form-control form-control-sm" id="course_name" name="course_name" required />
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label small" for="category">Category</label>
-                    <input class="form-control form-control-sm" id="category" name="category" />
-                  </div>
-                  <div class="row g-2 mb-3">
-                    <div class="col-6">
-                      <label class="form-label small" for="price">Price</label>
-                      <input
-                        class="form-control form-control-sm"
-                        id="price"
-                        name="price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                      />
-                    </div>
-                    <div class="col-6">
-                      <% if (isAdmin) { %>
-                        <label class="form-label small" for="instructor_id">Instructor</label>
-                        <select
-                          class="form-select form-select-sm"
-                          id="instructor_id"
-                          name="instructor_id"
-                        >
-                          <option value="">Auto</option>
-                          <% lecturers.forEach(function (lect) { %>
-                            <option value="<%= lect.id %>"><%= lect.name %></option>
-                          <% }); %>
-                        </select>
-                      <% } else { %>
-                        <label class="form-label small">&nbsp;</label>
-                        <div class="form-control form-control-sm text-muted bg-light">
-                          <%= currentUser.name %>
-                        </div>
-                      <% } %>
-                    </div>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label small" for="description">Description</label>
-                    <textarea class="form-control form-control-sm" id="description" name="description" rows="3"></textarea>
-                  </div>
-                  <div class="row g-2 mb-3">
-                    <div class="col-4">
-                      <label class="form-label small" for="level">Level</label>
-                      <input class="form-control form-control-sm" id="level" name="level" placeholder="Beginner" />
-                    </div>
-                    <div class="col-4">
-                      <label class="form-label small" for="language">Language</label>
-                      <input class="form-control form-control-sm" id="language" name="language" placeholder="English" />
-                    </div>
-                    <div class="col-4">
-                      <label class="form-label small" for="stock_qty">Stock Qty</label>
-                      <input class="form-control form-control-sm" id="stock_qty" name="stock_qty" type="number" min="0" value="20" />
-                    </div>
-                  </div>
-                  <button class="btn btn-gradient w-100" type="submit">Publish course</button>
-                </form>
-              </div>
-            <% } %>
-
-            <% if (isStudent) { %>
+          <% if (isStudentPage) { %>
+            <div class="col-12 col-lg-4">
               <div class="dashboard-panel card mb-4">
                 <div class="panel-header mb-1">
                   <h5 class="card-title mb-0">Wallet balance</h5>
@@ -468,8 +310,8 @@
                 <p class="display-6 fw-semibold mb-1">$<%= Number(walletBalance || 0).toFixed(2) %></p>
                 <p class="text-muted small">Use wallet or external payment at checkout.</p>
               </div>
-            <% } %>
-          </div>
+            </div>
+          <% } %>
         </div>
       </div>
     </main>
@@ -484,10 +326,14 @@
         const clearBtn = document.getElementById("clearFilters");
         const cards = Array.from(document.querySelectorAll("#courseList .course-card"));
         const emptyState = document.getElementById("courseEmptyState");
+        const emptyMsg = document.getElementById("courseEmptyMessage");
+        const emptyResetBtn = document.getElementById("emptyStateResetBtn");
         const visibilityText = document.getElementById("courseVisibilityText");
         if (!form) return;
         if (!cards.length) {
           if (emptyState) emptyState.style.display = "block";
+          if (emptyMsg) emptyMsg.textContent = "No courses are published yet.";
+          if (emptyResetBtn) emptyResetBtn.style.display = "none";
           if (visibilityText) visibilityText.textContent = "Showing 0 of 0 courses";
           return;
         }
@@ -516,7 +362,13 @@
             const cardLanguage = card.getAttribute("data-language") || "";
             const price = Number(card.getAttribute("data-price") || 0);
 
-            const matchesQuery = !qValue || name.includes(qValue) || description.includes(qValue);
+            const matchesQuery =
+              !qValue ||
+              name.includes(qValue) ||
+              description.includes(qValue) ||
+              cardCategory.includes(qValue) ||
+              cardLevel.includes(qValue) ||
+              cardLanguage.includes(qValue);
             const matchesCategory = !categoryValue || cardCategory === categoryValue;
             const matchesLevel = !levelValue || cardLevel === levelValue;
             const matchesLanguage = !languageValue || cardLanguage === languageValue;
@@ -529,6 +381,12 @@
           });
 
           emptyState.style.display = visibleCount ? "none" : "block";
+          if (!visibleCount && emptyMsg) {
+            emptyMsg.textContent = "No courses match your current filters.";
+          }
+          if (emptyResetBtn) {
+            emptyResetBtn.style.display = visibleCount ? "none" : "";
+          }
           visibilityText.textContent = "Showing " + visibleCount + " of " + cards.length + " courses";
         };
 
@@ -551,6 +409,12 @@
           max.value = "";
           applyFilters();
         });
+
+        if (emptyResetBtn) {
+          emptyResetBtn.addEventListener("click", function () {
+            clearBtn.click();
+          });
+        }
 
         applyFilters();
       })();

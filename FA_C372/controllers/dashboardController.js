@@ -6,17 +6,20 @@ const {
   getEnrollmentsByUserForAdmin,
   getEnrollmentsByInstructorCourse,
   getCompletionTrendForInstructor,
+  getEnrollmentTrendForInstructor,
 } = require("../models/enrollmentModel");
 const {
   getCoursesWithStats,
   getCoursesByInstructor,
   getInstructorCourseSummaries,
 } = require("../models/courseModel");
+const { getReviewsForCourses } = require("../models/reviewModel");
 const {
   getLecturerRevenueSummary,
   getLecturerMonthlyRevenue,
 } = require("../models/orderModel");
 const { getAnnouncementsForLecturer } = require("../models/announcementModel");
+const { getFraudEventsSummary, getRecentFraudEvents } = require("../models/paymentAttemptModel");
 const {
   getAllUsers,
   getUserById,
@@ -25,7 +28,7 @@ const {
   updateUserAccountStatus,
 } = require("../models/userModel");
 const { getSubscriptionByUser } = require("../models/subscriptionModel");
-const { getUserActivities, logUserActivity } = require("../models/userActivityModel");
+const { getUserActivities, getRecentActivities, logUserActivity } = require("../models/userActivityModel");
 const {
   DEFAULT_CURRENCY,
   SUPPORTED_CURRENCIES,
@@ -60,15 +63,19 @@ const studentDashboard = async (req, res, next) => {
 const lecturerDashboard = async (req, res, next) => {
   try {
     const lecturerId = req.user.id;
-    const [courses, enrollments, studentCount, completionTrend, announcements, revenueSummary, monthlyRevenue] =
+    const selectedAnnouncementCourseId = Number(req.query.announcement_course || 0) || null;
+    const announcementSearch = String(req.query.announcement_q || "").trim().toLowerCase();
+    const [courses, enrollments, studentCount, completionTrend, enrollmentTrend, announcements, revenueSummary, monthlyRevenue, lecturerTransactions] =
       await Promise.all([
         getInstructorCourseSummaries(lecturerId),
         getEnrollmentsByInstructorCourse(lecturerId),
         getDistinctStudentCount(lecturerId),
         getCompletionTrendForInstructor(lecturerId, 6),
-        getAnnouncementsForLecturer(lecturerId, 5),
+        getEnrollmentTrendForInstructor(lecturerId, 6),
+        getAnnouncementsForLecturer(lecturerId, 20, selectedAnnouncementCourseId),
         getLecturerRevenueSummary(lecturerId),
         getLecturerMonthlyRevenue(lecturerId, 6),
+        getTransactionsForUser(lecturerId, 120),
       ]);
 
     const rosterMap = {};
@@ -92,16 +99,52 @@ const lecturerDashboard = async (req, res, next) => {
     const rosterList = Object.values(rosterMap);
     const totalRevenue = courses.reduce((sum, course) => sum + (course.revenue || 0), 0);
     const totalEnrollments = courses.reduce((sum, course) => sum + (course.enrollment_count || 0), 0);
+    const courseIds = courses.map((course) => Number(course.id));
+    const reviewRows = courseIds.length ? await getReviewsForCourses(courseIds) : [];
+    const reviewsByCourse = {};
+    reviewRows.forEach((review) => {
+      const key = Number(review.course_id);
+      if (!reviewsByCourse[key]) reviewsByCourse[key] = [];
+      reviewsByCourse[key].push(review);
+    });
+    const topCourses = [...courses]
+      .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
+      .slice(0, 5);
+    const ratingDistribution = [1, 2, 3, 4, 5].map((rating) => ({
+      rating,
+      count: courses.filter((c) => Math.round(Number(c.avg_rating || 0)) === rating).length,
+    }));
+    const payouts = (lecturerTransactions || []).filter((tx) =>
+      String(tx.type || "").toLowerCase().includes("payout")
+    );
+    const lastPayout = payouts.length ? payouts[0].created_at : null;
+    const totalPayout = payouts.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const pendingPayoutEstimate = Math.max(0, Number(revenueSummary?.totalRevenue || 0) - totalPayout);
+    const filteredAnnouncements = announcements.filter((note) => {
+      if (!announcementSearch) return true;
+      const text = `${note.title || ""} ${note.message || ""} ${note.course_name || ""}`.toLowerCase();
+      return text.includes(announcementSearch);
+    });
 
     res.render("lecturerDashboard", {
       courses,
       rosterList,
       completionTrend,
-      announcements,
+      enrollmentTrend,
+      reviewsByCourse,
+      topCourses,
+      ratingDistribution,
+      announcements: filteredAnnouncements,
+      announcementFilters: {
+        courseId: selectedAnnouncementCourseId,
+        q: announcementSearch,
+      },
       totalRevenue,
       totalEnrollments,
       studentCount,
       revenueSummary,
+      pendingPayoutEstimate,
+      lastPayout,
       monthlyRevenue,
       status: req.query,
     });
@@ -112,13 +155,26 @@ const lecturerDashboard = async (req, res, next) => {
 
 const adminDashboard = async (req, res, next) => {
   try {
-    const [users, courses, transactions, lecturers] = await Promise.all([
+    const [users, courses, transactions, lecturers, recentActivities, fraudSummary, recentFraudEvents] =
+      await Promise.all([
       getAllUsers(),
       getCoursesWithStats(),
       getAllTransactions(),
       getLecturers(),
+      getRecentActivities(20),
+      getFraudEventsSummary(24),
+      getRecentFraudEvents(25),
     ]);
-    res.render("adminDashboard", { users, courses, transactions, lecturers, status: req.query });
+    res.render("adminDashboard", {
+      users,
+      courses,
+      transactions,
+      lecturers,
+      recentActivities,
+      fraudSummary,
+      recentFraudEvents,
+      status: req.query,
+    });
   } catch (err) {
     next(err);
   }
@@ -161,6 +217,18 @@ const adminUserDetails = async (req, res, next) => {
       getUserActivities(userId, 60),
       getTransactionsForUser(userId, 60),
     ]);
+    let subscriptionNextBillingDate = null;
+    if (subscription && String(subscription.status || "").toLowerCase() === "active") {
+      const base = new Date(subscription.starts_at);
+      if (!Number.isNaN(base.getTime())) {
+        const next = new Date(base);
+        const now = new Date();
+        while (next <= now) {
+          next.setMonth(next.getMonth() + 1);
+        }
+        subscriptionNextBillingDate = next;
+      }
+    }
 
     const toTimestamp = (value) => {
       const time = new Date(value).getTime();
@@ -198,6 +266,7 @@ const adminUserDetails = async (req, res, next) => {
       enrollments,
       assignedCourses,
       subscription,
+      subscriptionNextBillingDate,
       timeline,
       status: req.query,
     });
@@ -239,7 +308,9 @@ const walletPage = async (req, res, next) => {
       walletBalance,
       walletDisplayBalance,
       selectedCurrency,
+      baseCurrency: DEFAULT_CURRENCY,
       currencySymbol: getSymbol(selectedCurrency),
+      baseCurrencySymbol: getSymbol(DEFAULT_CURRENCY),
       supportedCurrencies: SUPPORTED_CURRENCIES,
       transactions,
       status: req.query,

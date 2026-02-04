@@ -52,8 +52,21 @@ const upsertSubscription = async ({
   );
 };
 
+const cancelSubscriptionByUser = async (userId, endsAt = new Date()) => {
+  const [result] = await pool.query(
+    `UPDATE subscriptions
+     SET status = 'cancelled',
+         ends_at = ?
+     WHERE user_id = ?
+       AND status <> 'cancelled'`,
+    [endsAt, userId]
+  );
+  return Number(result.affectedRows || 0) > 0;
+};
+
 module.exports = {
   ensureTable,
   getSubscriptionByUser,
   upsertSubscription,
+  cancelSubscriptionByUser,
 };

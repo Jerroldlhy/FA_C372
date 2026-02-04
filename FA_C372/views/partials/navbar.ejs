@@ -12,16 +12,24 @@
           : safeRole === "lecturer"
           ? "/dashboard/lecturer"
           : "/dashboard/student";
+      const dashboardLabel =
+        safeRole === "admin"
+          ? "Admin Dashboard"
+          : safeRole === "lecturer"
+          ? "Lecturer Dashboard"
+          : "Student Dashboard";
       const navItems = [
-        { label: "Courses", href: "/courses" },
         { label: "Mentors", href: "/mentors" },
         { label: "Plans", href: "/plans" }
       ];
+      if (safeRole !== "admin" && safeRole !== "lecturer") {
+        navItems.unshift({ label: "Courses", href: "/courses" });
+      }
       if (safeRole === "student") {
         navItems.push({ label: "My Learning", href: "/learning" });
         navItems.push({ label: "Wallet", href: "/wallet" });
         navItems.push({ label: "Cart", href: "/cart" });
-        navItems.push({ label: "Orders", href: "/orders" });
+        navItems.push({ label: "Purchase History", href: "/orders" });
       }
     %>
     <div class="header-middle">
@@ -42,7 +50,7 @@
           </div>
           <div class="user-pill-actions">
             <a class="user-pill-dashboard" href="<%= dashboardPath %>">
-              Dashboard
+              <%= dashboardLabel %>
             </a>
             <form method="POST" action="/logout">
               <button class="user-pill-signout" type="submit">
@@ -58,3 +66,5 @@
     </div>
   </div>
 </header>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="/scripts/tom-select-init.js"></script>

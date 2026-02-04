@@ -27,11 +27,15 @@
             <p class="text-muted lead">
               Choose currency, then top up via wallet instant credit or external gateways.
             </p>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <a class="btn btn-outline btn-sm" href="/cart">Go to cart</a>
+              <a class="btn btn-outline btn-sm" href="/orders">View purchase history</a>
+            </div>
           </div>
           <div class="wallet-pill">
             <p class="text-muted small mb-1">Available balance</p>
             <strong class="display-5"><%= currencySymbol %><%= Number(walletDisplayBalance || 0).toFixed(2) %></strong>
-            <p class="text-muted small mb-0">Equivalent to $<%= Number(walletBalance || 0).toFixed(2) %> USD.</p>
+            <p class="text-muted small mb-0">Equivalent to <%= baseCurrencySymbol %><%= Number(walletBalance || 0).toFixed(2) %> <%= baseCurrency %>.</p>
           </div>
         </header>
 
@@ -44,6 +48,9 @@
         <% if (status?.topup_error && status?.topup_error !== "external_flow") { %>
           <div class="alert alert-danger">Top-up failed: <%= String(status.topup_error).replace(/_/g, " ") %>.</div>
         <% } %>
+        <div class="alert alert-secondary small">
+          Wallet top-up only adds balance. Course purchases are completed at checkout in your cart.
+        </div>
 
         <section class="wallet-grid">
           <div class="wallet-card stack-card">

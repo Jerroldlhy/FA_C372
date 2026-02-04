@@ -1,3 +1,5 @@
+@import url("https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css");
+
 :root {
   --bg: #f6f7fb;
   --text: #1d1d1f;
@@ -169,27 +171,40 @@ img {
 .user-pill-dashboard {
   flex: 0 0 auto;
   text-align: center;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(90deg, #6f63ef, #5d5fe6);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  box-shadow: 0 10px 18px rgba(93, 95, 230, 0.25);
   text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .user-pill-dashboard:hover {
-  color: #4f5f74;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(93, 95, 230, 0.3);
 }
 
 .user-pill-signout {
   width: auto;
-  border: 0;
+  border: 1px solid #d8dcec;
   border-radius: 999px;
-  padding: 0.33rem 0.75rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #ffffff;
-  background: linear-gradient(90deg, #6f63ef, #5d5fe6);
-  box-shadow: 0 12px 22px rgba(93, 95, 230, 0.3);
+  padding: 0.33rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+  background: #ffffff;
   cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.user-pill-signout:hover {
+  border-color: #fca5a5;
+  color: #b91c1c;
+  background: #fff5f5;
 }
 
 .btn-link {
@@ -667,7 +682,7 @@ img {
   object-fit: cover;
 }
 
-.badge {
+.course-thumb .badge {
   position: absolute;
   top: 14px;
   left: 14px;

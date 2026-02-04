@@ -30,14 +30,43 @@
             Subscription updated successfully to <strong><%= (status.plan || "").toUpperCase() %></strong>.
           </div>
         <% } %>
+        <% if (status?.subscription_cancelled) { %>
+          <div class="alert alert-success">Subscription cancelled successfully.</div>
+        <% } %>
         <% if (status?.subscription_error === "invalid_plan") { %>
           <div class="alert alert-danger">Selected plan is invalid. Please try again.</div>
+        <% } %>
+        <% if (status?.subscription_error === "no_subscription") { %>
+          <div class="alert alert-warning">No subscription found to cancel.</div>
+        <% } %>
+        <% if (status?.subscription_error === "already_cancelled") { %>
+          <div class="alert alert-warning">Subscription is already cancelled.</div>
+        <% } %>
+        <% if (status?.subscription_error === "cancel_failed") { %>
+          <div class="alert alert-danger">Unable to cancel subscription right now. Please try again.</div>
         <% } %>
         <% if (currentSubscription) { %>
           <div class="alert alert-info">
             Current plan: <strong><%= currentSubscription.plan_name %></strong>
             (<%= currentSubscription.status %>)
+            <% if (currentSubscription.monthly_price !== null && currentSubscription.monthly_price !== undefined) { %>
+              · Monthly: <strong>$<%= Number(currentSubscription.monthly_price || 0).toFixed(2) %></strong>
+            <% } %>
+            <% if (currentSubscription.starts_at) { %>
+              · Started: <strong><%= new Date(currentSubscription.starts_at).toLocaleDateString() %></strong>
+            <% } %>
+            <% if (nextBillingDate) { %>
+              · Next billing: <strong><%= new Date(nextBillingDate).toLocaleDateString() %></strong>
+            <% } %>
+            <% if (currentSubscription.ends_at) { %>
+              · Ended: <strong><%= new Date(currentSubscription.ends_at).toLocaleDateString() %></strong>
+            <% } %>
           </div>
+          <% if (currentUser && String(currentUser.role || "").toLowerCase() === "student" && String(currentSubscription.status || "").toLowerCase() !== "cancelled") { %>
+            <form method="POST" action="/plans/cancel" class="mb-4" onsubmit="return confirm('Cancel your current subscription?');">
+              <button class="btn btn-outline-secondary btn-sm" type="submit">Cancel current subscription</button>
+            </form>
+          <% } %>
         <% } %>
 
         <div class="plans-grid">

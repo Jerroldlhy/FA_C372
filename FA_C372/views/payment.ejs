@@ -49,6 +49,9 @@
         <% if (status?.topup_error) { %>
           <div class="alert alert-danger">Top-up payment failed: <%= String(status.topup_error).replace(/_/g, " ") %>.</div>
         <% } %>
+        <div class="alert alert-secondary small">
+          Your wallet balance will only be credited after payment succeeds and you are redirected back.
+        </div>
 
         <div class="row g-4">
           <div class="col-lg-8">

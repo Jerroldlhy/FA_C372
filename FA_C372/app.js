@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 const pool = require("./models/db");
 const MySQLSessionStore = require("./models/mysqlSessionStore");
+const { enforceSameOrigin } = require("./middleware/securityMiddleware");
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(enforceSameOrigin);
 
 const authController = require("./controllers/authController");
 const courseController = require("./controllers/courseController");
@@ -24,10 +26,11 @@ const dashboardController = require("./controllers/dashboardController");
 const lecturerController = require("./controllers/lecturerController");
 const learningController = require("./controllers/learningController");
 const pageController = require("./controllers/pageController");
+const reportController = require("./controllers/reportController");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
 const { ensureTable: ensureUserActivityTable, logUserActivity } = require("./models/userActivityModel");
-const { ensureAnnouncementsTable } = require("./models/announcementModel");
+const { ensureAnnouncementsTable, ensureRecipientCountColumn } = require("./models/announcementModel");
 const { ensureAccountStatusColumns, ensurePasswordResetColumns } = require("./models/userModel");
 const validators = require("./middleware/validationMiddleware");
 
@@ -134,6 +137,7 @@ app.post(
 app.get("/mentors", pageController.mentors);
 app.get("/plans", pageController.plans);
 app.post("/plans/subscribe", authenticateToken, requireRole(["student"]), pageController.subscribePlan);
+app.post("/plans/cancel", authenticateToken, requireRole(["student"]), pageController.cancelPlan);
 app.get("/login", authController.showLogin);
 app.get("/auth/google", authController.googleRedirect);
 app.get("/signup", authController.showSignup);
@@ -161,6 +165,13 @@ app.post(
   validators.validateCourseIdParam,
   validators.validateAnnouncement,
   lecturerController.sendCourseAnnouncement
+);
+app.get(
+  "/dashboard/lecturer/courses/:id/roster/export",
+  authenticateToken,
+  requireRole(["lecturer"]),
+  validators.validateCourseIdParam,
+  lecturerController.exportCourseRoster
 );
 
 const requireAdmin = (req, res, next) => {
@@ -220,6 +231,18 @@ app.post(
   validators.validateAdminStatusUpdate,
   dashboardController.updateUserStatus
 );
+app.get(
+  "/admin/reports/sales",
+  authenticateToken,
+  requireAdmin,
+  reportController.showSalesReport
+);
+app.get(
+  "/admin/reports/sales/export",
+  authenticateToken,
+  requireAdmin,
+  reportController.exportSalesReport
+);
 
 app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
 app.post("/wallet/payment/start", authenticateToken, requireRole(["student"]), validators.validateTopUp, paymentController.startWalletTopUpPayment);
@@ -248,13 +271,6 @@ app.post(
   requireRole(["student"]),
   validators.validateCourseIdParam,
   cartController.removeCourseFromCart
-);
-app.post(
-  "/cart/:id/quantity",
-  authenticateToken,
-  requireRole(["student"]),
-  validators.validateCartQuantityUpdate,
-  cartController.updateCourseQuantityInCart
 );
 app.post(
   "/payments/currency",
@@ -335,6 +351,7 @@ const startServer = async () => {
   await ensurePasswordResetColumns();
   await ensureUserActivityTable();
   await ensureAnnouncementsTable();
+  await ensureRecipientCountColumn();
   await sessionStore.ensureTable();
   await ensurePaymentTables();
   await ensureSubscriptionTable();

@@ -54,18 +54,26 @@
             <div class="d-flex flex-wrap gap-2">
               <form method="POST" action="/admin/users/<%= user.id %>/role" class="d-flex gap-2">
                 <input type="hidden" name="redirect_to" value="detail" />
-                <select class="form-select form-select-sm role-select" name="role">
+                <select class="form-select form-select-sm role-select" name="role" <%= Number(currentUser?.id) === Number(user.id) ? "disabled" : "" %>>
                   <option value="student" <%= user.role === "student" ? "selected" : "" %>>Student</option>
                   <option value="lecturer" <%= user.role === "lecturer" ? "selected" : "" %>>Lecturer</option>
                   <option value="admin" <%= user.role === "admin" ? "selected" : "" %>>Admin</option>
                 </select>
-                <button class="btn btn-outline-primary" type="submit">Update role</button>
+                <% if (Number(currentUser?.id) === Number(user.id)) { %>
+                  <button class="btn btn-outline-secondary" type="button" disabled>Current account</button>
+                <% } else { %>
+                  <button class="btn btn-outline-primary" type="submit">Update role</button>
+                <% } %>
               </form>
-              <form method="POST" action="/admin/users/<%= user.id %>/status" class="d-flex gap-2">
+              <form method="POST" action="/admin/users/<%= user.id %>/status" class="d-flex gap-2" onsubmit="return confirm('Are you sure you want to change this account status?');">
                 <input type="hidden" name="account_status" value="<%= user.account_status === 'suspended' ? 'active' : 'suspended' %>" />
-                <button class="btn <%= user.account_status === 'suspended' ? 'btn-success' : 'btn-danger' %>" type="submit">
-                  <%= user.account_status === "suspended" ? "Reactivate account" : "Suspend account" %>
-                </button>
+                <% if (Number(currentUser?.id) === Number(user.id)) { %>
+                  <button class="btn btn-outline-secondary" type="button" disabled>Current account</button>
+                <% } else { %>
+                  <button class="btn <%= user.account_status === 'suspended' ? 'btn-success' : 'btn-danger' %>" type="submit">
+                    <%= user.account_status === "suspended" ? "Reactivate account" : "Suspend account" %>
+                  </button>
+                <% } %>
               </form>
             </div>
           </div>
@@ -85,6 +93,9 @@
                 <p class="mb-1"><strong><%= subscription.plan_name %></strong> (<%= subscription.plan_code %>)</p>
                 <p class="mb-1 text-capitalize">Status: <%= subscription.status %></p>
                 <p class="mb-0">Monthly: $<%= Number(subscription.monthly_price || 0).toFixed(2) %></p>
+                <p class="mb-0">Started: <%= subscription.starts_at ? new Date(subscription.starts_at).toLocaleDateString() : "-" %></p>
+                <p class="mb-0">Ends: <%= subscription.ends_at ? new Date(subscription.ends_at).toLocaleDateString() : "-" %></p>
+                <p class="mb-0">Next billing: <%= subscriptionNextBillingDate ? new Date(subscriptionNextBillingDate).toLocaleDateString() : "-" %></p>
               <% } %>
             </div>
           </div>

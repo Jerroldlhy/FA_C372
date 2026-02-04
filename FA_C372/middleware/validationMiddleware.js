@@ -4,7 +4,6 @@ const ROLE_OPTIONS = new Set(["student", "lecturer", "admin"]);
 const ACCOUNT_STATUS_OPTIONS = new Set(["active", "suspended"]);
 const PAYMENT_METHODS = new Set(["wallet", "paypal", "stripe", "nets"]);
 const TOPUP_METHODS = new Set(["wallet", "paypal", "bank_transfer", "card", "stripe", "nets"]);
-const MAX_CART_QTY = 20;
 
 const asTrimmedString = (value, maxLen = 255) => String(value || "").trim().slice(0, maxLen);
 const asPositiveInt = (value) => {
@@ -29,8 +28,8 @@ const validateSignup = (req, res, next) => {
   const email = asTrimmedString(req.body.email, 100).toLowerCase();
   const password = String(req.body.password || "");
 
-  if (!firstName || !lastName || !EMAIL_PATTERN.test(email) || password.length < 8) {
-    return res.status(400).render("signup", { error: "Use valid name, email, and password (8+ chars)." });
+  if (!firstName || !lastName || !EMAIL_PATTERN.test(email) || password.length < 6) {
+    return res.status(400).render("signup", { error: "Use valid name, email, and password (6+ chars)." });
   }
 
   req.body.first_name = firstName;
@@ -53,8 +52,8 @@ const validateResetPassword = (req, res, next) => {
   const password = String(req.body.password || "");
   const confirmPassword = String(req.body.confirm_password || "");
   if (!token) return res.status(400).render("resetPassword", { error: "Invalid reset token.", token: null });
-  if (password.length < 8) {
-    return res.status(400).render("resetPassword", { error: "Password must be at least 8 characters.", token });
+  if (password.length < 6) {
+    return res.status(400).render("resetPassword", { error: "Password must be at least 6 characters.", token });
   }
   if (password !== confirmPassword) {
     return res.status(400).render("resetPassword", { error: "Passwords do not match.", token });
@@ -100,15 +99,6 @@ const validateAnnouncement = (req, res, next) => {
   }
   req.body.title = title;
   req.body.message = message || null;
-  next();
-};
-
-const validateCartQuantityUpdate = (req, res, next) => {
-  const courseId = asPositiveInt(req.params.id);
-  const quantity = asPositiveInt(req.body.quantity);
-  if (!courseId) return res.redirect("/cart?qty_error=invalid_course");
-  if (!quantity || quantity > MAX_CART_QTY) return res.redirect("/cart?qty_error=invalid_quantity");
-  req.validated = { ...(req.validated || {}), courseId, quantity };
   next();
 };
 
@@ -173,7 +163,6 @@ module.exports = {
   validateCourseCreate,
   validateCourseUpdate,
   validateCourseIdParam,
-  validateCartQuantityUpdate,
   validateCheckout,
   validateAdminRoleUpdate,
   validateAdminUserIdParam,
@@ -181,5 +170,4 @@ module.exports = {
   validateTopUp,
   validateCurrencySelection,
   validateAnnouncement,
-  MAX_CART_QTY,
 };

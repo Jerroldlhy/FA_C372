@@ -20,6 +20,10 @@ const { logUserActivity } = require("../models/userActivityModel");
 
 const listCourses = async (req, res, next) => {
   try {
+    const role = req.user?.role ? String(req.user.role).toLowerCase() : "";
+    if (role === "admin") return res.redirect("/dashboard/admin");
+    if (role === "lecturer") return res.redirect("/dashboard/lecturer");
+
     const filters = {
       q: (req.query.q || "").trim(),
       category: (req.query.category || "").trim(),
@@ -97,7 +101,7 @@ const getCourseDetails = async (req, res, next) => {
 
 const handleCreateCourse = async (req, res, next) => {
   try {
-    const { course_name, price, category, description, level, language, stock_qty, instructor_id } = req.body;
+    const { course_name, price, category, description, level, language, instructor_id } = req.body;
     if (!course_name || !price) return res.redirect("/courses?course_error=missing");
     const role = (req.user.role || "").toLowerCase();
     let assignedInstructor = null;
@@ -110,7 +114,7 @@ const handleCreateCourse = async (req, res, next) => {
       category,
       level,
       language,
-      stock_qty,
+      stock_qty: 0,
       instructor_id: assignedInstructor,
     });
     const redirectBase = req.body.redirect_to === "lecturer_dashboard" ? "/dashboard/lecturer" : "/courses";
@@ -122,7 +126,7 @@ const handleCreateCourse = async (req, res, next) => {
 
 const handleUpdateCourse = async (req, res, next) => {
   try {
-    const { course_name, price, category, description, level, language, stock_qty } = req.body;
+    const { course_name, price, category, description, level, language } = req.body;
     const course = await getCourseById(req.params.id);
     if (!course) return res.redirect("/courses?course_error=not_found");
     const role = (req.user.role || "").toLowerCase();
@@ -145,7 +149,7 @@ const handleUpdateCourse = async (req, res, next) => {
       description,
       level,
       language,
-      stock_qty,
+      stock_qty: 0,
       instructor_id: assignedInstructor,
       is_active: normalizedIsActive,
     });

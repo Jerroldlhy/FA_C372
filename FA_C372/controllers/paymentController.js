@@ -441,8 +441,8 @@ const createTopUpPaypalOrder = async (req, res, next) => {
       method: "paypal_topup",
       currency: topup.currency,
     });
-    if (fraud.action === "block") {
-      return res.status(429).json({ error: "Payment blocked due to risk checks." });
+    if (fraud.action === "block" || fraud.action === "review") {
+      return res.status(429).json({ error: "Top-up is temporarily held for AML review." });
     }
 
     const order = await withRetries(
@@ -517,8 +517,8 @@ const createTopUpStripeSession = async (req, res, next) => {
       method: "stripe_topup",
       currency: topup.currency,
     });
-    if (fraud.action === "block") {
-      return res.status(429).json({ error: "Payment blocked due to risk checks." });
+    if (fraud.action === "block" || fraud.action === "review") {
+      return res.status(429).json({ error: "Top-up is temporarily held for AML review." });
     }
 
     const host = `${req.protocol}://${req.get("host")}`;
@@ -597,8 +597,8 @@ const requestTopUpNets = async (req, res, next) => {
       method: "nets_topup",
       currency: "SGD",
     });
-    if (fraud.action === "block") {
-      return res.redirect("/wallet?topup_error=nets_blocked");
+    if (fraud.action === "block" || fraud.action === "review") {
+      return res.redirect("/wallet?topup_error=aml_review");
     }
 
     const response = await requestNetsQr(netsAmount);

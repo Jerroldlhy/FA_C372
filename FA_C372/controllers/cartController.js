@@ -2,7 +2,6 @@ const { getCourseById } = require("../models/courseModel");
 const {
   addItemToCart,
   removeItemFromCart,
-  updateItemQuantity,
   getCartItemsForUser,
 } = require("../models/cartModel");
 const { isStudentEnrolled } = require("../models/enrollmentModel");
@@ -26,8 +25,10 @@ const showCart = async (req, res, next) => {
       items,
       total,
       currency,
+      baseCurrency: DEFAULT_CURRENCY,
       supportedCurrencies: SUPPORTED_CURRENCIES,
       currencySymbol: getSymbol(currency),
+      baseCurrencySymbol: getSymbol(DEFAULT_CURRENCY),
       convertedTotal,
       status: req.query,
       activePayment: req.session?.payment || null,
@@ -75,21 +76,8 @@ const removeCourseFromCart = async (req, res, next) => {
   }
 };
 
-const updateCourseQuantityInCart = async (req, res, next) => {
-  try {
-    const courseId = req.validated?.courseId || Number(req.params.id);
-    const quantity = req.validated?.quantity || Number(req.body.quantity);
-    const updated = await updateItemQuantity(req.user.id, courseId, quantity);
-    if (!updated) return res.redirect("/cart?qty_error=item_missing");
-    return res.redirect("/cart?qty_updated=1");
-  } catch (err) {
-    return next(err);
-  }
-};
-
 module.exports = {
   showCart,
   addCourseToCart,
   removeCourseFromCart,
-  updateCourseQuantityInCart,
 };

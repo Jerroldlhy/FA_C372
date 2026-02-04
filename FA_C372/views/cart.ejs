@@ -26,26 +26,14 @@
             <p class="text-muted small mb-1">Items</p>
             <strong class="display-6"><%= items.length %></strong>
             <p class="text-muted small mb-0">Total: <%= currencySymbol %><%= Number(convertedTotal || 0).toFixed(2) %> <%= currency %></p>
-            <% if (currency !== "USD") { %>
-              <p class="text-muted small mb-0">Base USD: $<%= Number(total || 0).toFixed(2) %></p>
+            <% if (currency !== baseCurrency) { %>
+              <p class="text-muted small mb-0">Base <%= baseCurrency %>: <%= baseCurrencySymbol %><%= Number(total || 0).toFixed(2) %></p>
             <% } %>
           </div>
         </div>
 
         <% if (status?.removed) { %>
           <div class="alert alert-info">Item removed from cart.</div>
-        <% } %>
-        <% if (status?.qty_updated) { %>
-          <div class="alert alert-success">Cart quantity updated.</div>
-        <% } %>
-        <% if (status?.qty_error === "invalid_course") { %>
-          <div class="alert alert-danger">Invalid course item.</div>
-        <% } %>
-        <% if (status?.qty_error === "invalid_quantity") { %>
-          <div class="alert alert-danger">Quantity must be between 1 and 20.</div>
-        <% } %>
-        <% if (status?.qty_error === "item_missing") { %>
-          <div class="alert alert-warning">Item no longer exists in your cart.</div>
         <% } %>
         <% if (status?.checkout_error === "wallet_balance") { %>
           <div class="alert alert-danger">Insufficient wallet balance for checkout.</div>
@@ -89,7 +77,7 @@
                     <th>Course</th>
                     <th>Category</th>
                     <th>Price</th>
-                    <th>Quantity</th>
+                    <th>Enrollment</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -104,18 +92,8 @@
                       </td>
                       <td data-label="Category"><%= item.category || "General" %></td>
                       <td data-label="Price">$<%= Number(item.price || 0).toFixed(2) %></td>
-                      <td data-label="Quantity">
-                        <div class="qty-controls">
-                          <form method="POST" action="/cart/<%= item.course_id %>/quantity" class="m-0">
-                            <input type="hidden" name="quantity" value="<%= Math.max(1, Number(item.quantity || 1) - 1) %>" />
-                            <button class="btn btn-sm btn-outline-secondary" type="submit" <%= Number(item.quantity || 1) <= 1 ? "disabled" : "" %>>-</button>
-                          </form>
-                          <span class="qty-value"><%= Number(item.quantity || 1) %></span>
-                          <form method="POST" action="/cart/<%= item.course_id %>/quantity" class="m-0">
-                            <input type="hidden" name="quantity" value="<%= Number(item.quantity || 1) + 1 %>" />
-                            <button class="btn btn-sm btn-outline-secondary" type="submit" <%= Number(item.quantity || 1) >= 20 ? "disabled" : "" %>>+</button>
-                          </form>
-                        </div>
+                      <td data-label="Enrollment">
+                        <span class="text-muted small">1 seat (fixed)</span>
                       </td>
                       <td class="text-end" data-label="Actions">
                         <form method="POST" action="/cart/<%= item.course_id %>/remove">
@@ -134,6 +112,9 @@
                 Choose a method below, complete payment, then place your order.
                 Apple Pay / Google Pay can be supported through Stripe account settings.
               </p>
+              <div class="alert alert-info small py-2 mb-3">
+                <strong>Checkout flow:</strong> 1) Choose method, 2) Complete external payment (if needed), 3) Place order.
+              </div>
               <form method="POST" action="/payments/currency" class="row g-2 mb-3">
                 <div class="col-12 col-md-8">
                   <label class="form-label small mb-1" for="payment_currency">Payment currency</label>
@@ -170,17 +151,9 @@
               </div>
 
               <div id="actionPaypal" class="payment-action d-none">
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <button class="btn btn-outline" type="button" id="btnPaypalCreate">Create PayPal Order</button>
-                </div>
-                <div class="row g-2">
-                  <div class="col-12 col-md-8">
-                    <input class="form-control form-control-sm" id="paypalOrderId" placeholder="PayPal Order ID" />
-                  </div>
-                  <div class="col-12 col-md-4 d-grid">
-                    <button class="btn btn-primary btn-sm" type="button" id="btnPaypalCapture">Confirm PayPal Capture</button>
-                  </div>
-                </div>
+                <p class="small text-muted mb-2">Use the same PayPal secure button flow as Wallet top-up.</p>
+                <div id="paypal-button-container" class="border rounded p-2 bg-light"></div>
+                <div id="paypal-msg" class="small text-danger mt-2" style="display:none;"></div>
               </div>
 
               <div id="actionStripe" class="payment-action d-none">
@@ -200,7 +173,7 @@
               <% } %>
             </div>
 
-            <form class="row g-2" method="POST" action="/checkout">
+            <form class="row g-2" method="POST" action="/checkout" id="checkoutForm">
               <div class="col-12 col-md-4" id="checkoutMethodField">
                 <label class="form-label small" for="payment_method">Payment method</label>
                 <select class="form-select" id="payment_method" name="payment_method">
@@ -216,7 +189,7 @@
               </div>
               <div class="col-12 col-md-4 d-grid">
                 <label class="form-label small">&nbsp;</label>
-                <button class="btn btn-gradient" type="submit">Place order</button>
+                <button class="btn btn-gradient" id="placeOrderBtn" type="submit">Place order</button>
               </div>
             </form>
           <% } %>
@@ -224,6 +197,9 @@
       </div>
     </main>
 
+    <% if (paypalClientId) { %>
+      <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=<%= currency %>&intent=capture"></script>
+    <% } %>
     <script>
       async function postJson(url, body) {
         const res = await fetch(url, {
@@ -236,13 +212,14 @@
         return data;
       }
 
-      const btnPaypalCreate = document.getElementById("btnPaypalCreate");
-      const btnPaypalCapture = document.getElementById("btnPaypalCapture");
       const btnStripe = document.getElementById("btnStripe");
-      const paypalOrderId = document.getElementById("paypalOrderId");
       const methodSelect = document.getElementById("payment_method");
       const methodButtons = document.querySelectorAll("[data-method]");
       const checkoutMethodField = document.getElementById("checkoutMethodField");
+      const checkoutForm = document.getElementById("checkoutForm");
+      const placeOrderBtn = document.getElementById("placeOrderBtn");
+      const paypalMsg = document.getElementById("paypal-msg");
+      const activePaymentMethod = "<%= String(activePayment?.method || '').toLowerCase() %>";
       const paymentNotice = document.createElement("div");
       paymentNotice.className = "text-muted small mt-2";
       const actionSections = {
@@ -251,6 +228,21 @@
         stripe: document.getElementById("actionStripe"),
         nets: document.getElementById("actionNets"),
       };
+      let paymentInProgress = false;
+
+      function setPaymentInProgress(active) {
+        paymentInProgress = !!active;
+        methodButtons.forEach((btn) => {
+          btn.disabled = paymentInProgress;
+        });
+        if (btnStripe) btnStripe.disabled = paymentInProgress;
+      }
+
+      function showPaypalError(text) {
+        if (!paypalMsg) return;
+        paypalMsg.style.display = "block";
+        paypalMsg.textContent = text || "Unable to process PayPal payment.";
+      }
 
       function showAction(method) {
         Object.keys(actionSections).forEach((key) => {
@@ -273,6 +265,17 @@
           method === "wallet"
             ? "Wallet will be charged when you place order."
             : "Complete payment verification first, then place order.";
+        const needsExternalVerification = method === "paypal" || method === "stripe" || method === "nets";
+        const verifiedForMethod = activePaymentMethod && activePaymentMethod === method;
+        if (placeOrderBtn) {
+          placeOrderBtn.disabled = needsExternalVerification && !verifiedForMethod;
+        }
+        if (needsExternalVerification && !verifiedForMethod) {
+          paymentNotice.textContent = "Complete " + method.toUpperCase() + " payment first, then place order.";
+        }
+        if (needsExternalVerification && verifiedForMethod) {
+          paymentNotice.textContent = method.toUpperCase() + " payment verified. You can place order now.";
+        }
       }
 
       methodButtons.forEach((btn) => {
@@ -284,41 +287,71 @@
         showAction(methodSelect.value || "wallet");
       }
 
-      if (btnPaypalCreate) {
-        btnPaypalCreate.addEventListener("click", async () => {
-          try {
-            const order = await postJson("/api/paypal/create-order");
-            if (paypalOrderId) paypalOrderId.value = order.id || "";
-            alert(`PayPal order created: ${order.id || "N/A"}`);
-          } catch (err) {
-            alert(err.message);
-          }
-        });
-      }
-
-      if (btnPaypalCapture) {
-        btnPaypalCapture.addEventListener("click", async () => {
-          try {
-            const orderId = ((paypalOrderId && paypalOrderId.value) || "").trim();
-            if (!orderId) {
-              alert("Enter a PayPal order ID first.");
-              return;
+      if (window.paypal) {
+        window.paypal.Buttons({
+          onClick: function (data, actions) {
+            if (paymentInProgress) {
+              showPaypalError("Payment is already in progress.");
+              return actions.reject();
             }
-            await postJson("/api/paypal/capture-order", { orderId });
-            window.location.href = "/cart?payment_ready=paypal";
-          } catch (err) {
-            alert(err.message);
-          }
-        });
+            setPaymentInProgress(true);
+            if (paypalMsg) paypalMsg.style.display = "none";
+            return actions.resolve();
+          },
+          createOrder: function () {
+            return postJson("/api/paypal/create-order")
+              .then(function (order) {
+                if (!order || !order.id) throw new Error("Invalid PayPal order response");
+                return order.id;
+              })
+              .catch(function (err) {
+                setPaymentInProgress(false);
+                showPaypalError(err && err.message ? err.message : "Unable to start PayPal payment.");
+              });
+          },
+          onApprove: function (data) {
+            return postJson("/api/paypal/capture-order", { orderId: data.orderID })
+              .then(function () {
+                window.location.href = "/cart?payment_ready=paypal";
+              })
+              .catch(function (err) {
+                setPaymentInProgress(false);
+                showPaypalError(err && err.message ? err.message : "Payment capture failed.");
+              });
+          },
+          onCancel: function () {
+            setPaymentInProgress(false);
+            showPaypalError("Payment cancelled.");
+          },
+          onError: function () {
+            setPaymentInProgress(false);
+            showPaypalError("Unable to start PayPal payment.");
+          },
+        }).render("#paypal-button-container");
       }
 
       if (btnStripe) {
         btnStripe.addEventListener("click", async () => {
           try {
+            if (paymentInProgress) return;
+            setPaymentInProgress(true);
             const data = await postJson("/api/stripe/create-checkout-session");
             if (data.url) window.location.href = data.url;
           } catch (err) {
+            setPaymentInProgress(false);
             alert(err.message);
+          }
+        });
+      }
+
+      if (checkoutForm) {
+        checkoutForm.addEventListener("submit", function (event) {
+          const selected = (methodSelect && methodSelect.value) || "wallet";
+          const needsExternalVerification = selected === "paypal" || selected === "stripe" || selected === "nets";
+          const verifiedForMethod = activePaymentMethod && activePaymentMethod === selected;
+          if (needsExternalVerification && !verifiedForMethod) {
+            event.preventDefault();
+            alert("Please complete " + selected.toUpperCase() + " payment first.");
           }
         });
       }
