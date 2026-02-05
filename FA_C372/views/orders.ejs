@@ -32,10 +32,10 @@
             </div>
           <% } else { %>
             <div class="table-responsive">
-              <table class="table align-middle mb-0">
+              <table class="table align-middle mb-0 purchase-table">
                 <thead>
                   <tr>
-                    <th>Order #</th>
+                    <th>Invoice</th>
                     <th>Total</th>
                     <th>Refunded</th>
                     <th>Payment</th>
@@ -47,9 +47,18 @@
                 <tbody>
                   <% orders.forEach(function(order) { %>
                     <tr>
-                      <td><%= order.id %></td>
-                      <td>$<%= Number(order.total_amount || 0).toFixed(2) %></td>
-                      <td>$<%= Number(order.refunded_amount || 0).toFixed(2) %></td>
+                      <td class="purchase-id">
+                        <strong>INV-<%= order.id %></strong>
+                        <small>Order #<%= order.id %></small>
+                      </td>
+                      <td class="purchase-total">$<%= Number(order.total_amount || 0).toFixed(2) %></td>
+                      <td>
+                        <% if (Number(order.refunded_amount || 0) > 0) { %>
+                          <span class="purchase-refund">$<%= Number(order.refunded_amount || 0).toFixed(2) %></span>
+                        <% } else { %>
+                          <span class="purchase-refund is-none">$0.00</span>
+                        <% } %>
+                      </td>
                       <td class="text-capitalize">
                         <span class="status-badge <%= order.payment_status === 'paid' ? 'status-badge-success' : 'status-badge-warning' %>">
                           <%= order.payment_status %>
@@ -60,10 +69,14 @@
                           <%= order.order_status %>
                         </span>
                       </td>
-                      <td><%= order.created_at ? new Date(order.created_at).toLocaleString() : "" %></td>
-                      <td class="text-end">
-                        <a class="btn btn-sm btn-outline-primary" href="/orders/<%= order.id %>">View</a>
-                        <a class="btn btn-sm btn-outline-secondary" href="/orders/<%= order.id %>?download=invoice">Invoice PDF</a>
+                      <td class="purchase-date">
+                        <%= order.created_at ? new Date(order.created_at).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-" %>
+                      </td>
+                      <td>
+                        <div class="purchase-actions">
+                          <a class="btn btn-sm btn-outline-primary" href="/orders/<%= order.id %>">Details</a>
+                          <a class="btn btn-sm btn-outline-secondary" href="/orders/<%= order.id %>?download=invoice">Invoice PDF</a>
+                        </div>
                       </td>
                     </tr>
                   <% }); %>
@@ -74,5 +87,6 @@
         </div>
       </div>
     </main>
+      <%- include("partials/footer") %>
   </body>
 </html>

@@ -14,13 +14,13 @@
   </head>
   <body class="course-page">
     <%- include("partials/navbar") %>
-    <main class="section">
+    <main class="section mentor-section my-learning-page">
       <div class="container">
-        <div class="course-hero mb-4">
+        <header class="mentor-hero mb-4">
           <div>
-            <p class="eyebrow text-uppercase text-muted mb-2">Student Space</p>
-            <h1 class="display-6 fw-bold mb-1">My Learning</h1>
-            <p class="text-muted mb-0">Only your enrolled courses appear here.</p>
+            <p class="eyebrow text-uppercase text-muted mb-1">Student Space</p>
+            <h1 class="display-5 fw-bold">My Learning</h1>
+            <p class="text-muted lead">Only your enrolled courses appear here.</p>
           </div>
           <% if (enrollments && enrollments.length) { %>
             <% const totalCourses = enrollments.length; %>
@@ -31,7 +31,7 @@
               <p class="text-muted small mb-0">Average progress: <%= avgProgress %>%</p>
             </div>
           <% } %>
-        </div>
+        </header>
 
         <% if (status?.error === "invalid_course") { %>
           <div class="alert alert-danger">Invalid course access.</div>
@@ -82,5 +82,6 @@
         </div>
       </div>
     </main>
+      <%- include("partials/footer") %>
   </body>
 </html>

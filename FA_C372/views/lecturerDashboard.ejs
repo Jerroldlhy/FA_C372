@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -169,8 +169,8 @@
                           <div>
                             <strong><%= course.course_name %></strong>
                             <p class="text-muted small mb-0">
-                              <%= course.category || "General" %> ·
-                              <%= course.level || "All levels" %> ·
+                              <%= course.category || "General" %> |
+                              <%= course.level || "All levels" %> |
                               <%= course.language || "Any language" %>
                             </p>
                           </div>
@@ -664,5 +664,6 @@
         }
       })();
     </script>
+      <%- include("partials/footer") %>
   </body>
 </html>

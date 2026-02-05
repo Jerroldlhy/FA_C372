@@ -1,4 +1,5 @@
 @import url("https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=Space+Grotesk:wght@400..700&display=swap");
 
 :root {
   --bg: #f6f7fb;
@@ -27,6 +28,9 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -74,6 +78,10 @@ img {
   font-weight: 700;
   font-size: 1.1rem;
   flex-shrink: 0;
+}
+
+.site-header .brand {
+  transform: translateY(-4px);
 }
 
 .brand-dot {
@@ -131,13 +139,13 @@ img {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 0.55rem;
+  gap: 0.9rem;
   border: 1px solid #eceef6;
   background: #ffffff;
-  padding: 0.35rem 0.65rem;
-  border-radius: 16px;
+  padding: 0.45rem 0.8rem;
+  border-radius: 18px;
   box-shadow: 0 10px 30px rgba(15, 15, 40, 0.08);
-  min-width: 220px;
+  min-width: 300px;
   line-height: 1.2;
   position: relative;
   top: -2px;
@@ -145,13 +153,21 @@ img {
 
 .user-pill-meta {
   text-align: left;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-pill-role {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: #6b7280;
 }
 
 .user-pill-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
+  display: grid;
+  gap: 0.35rem;
   flex-wrap: nowrap;
   width: auto;
 }
@@ -161,25 +177,33 @@ img {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
+  width: 100%;
 }
 
 .user-pill strong {
   display: block;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-pill-dashboard {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   text-align: center;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 800;
   color: #ffffff;
   background: linear-gradient(90deg, #6f63ef, #5d5fe6);
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  min-width: 128px;
+  padding: 0.38rem 0.8rem;
   box-shadow: 0 10px 18px rgba(93, 95, 230, 0.25);
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .user-pill-dashboard:hover {
@@ -189,16 +213,19 @@ img {
 }
 
 .user-pill-signout {
-  width: auto;
+  width: 100%;
   border: 1px solid #d8dcec;
   border-radius: 999px;
-  padding: 0.33rem 0.7rem;
-  font-size: 0.76rem;
+  min-width: 128px;
+  padding: 0.36rem 0.8rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: #475569;
   background: #ffffff;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .user-pill-signout:hover {
@@ -625,6 +652,20 @@ img {
   height: 36px;
   border-radius: 12px;
   background: var(--gradient);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+}
+
+.float-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .section {
@@ -674,6 +715,7 @@ img {
 .course-thumb {
   position: relative;
   height: 160px;
+  margin: -1rem -1.15rem 0;
 }
 
 .course-thumb img {
@@ -704,18 +746,55 @@ img {
 
 .course-body h3 {
   font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.35;
+  min-height: 2.7em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.course-body p {
-  color: var(--muted);
-  font-size: 0.9rem;
+.course-category {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .course-meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.85rem;
-  color: #7a7f8f;
+  color: #6b7280;
+}
+
+.course-instructor {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 68%;
+}
+
+.course-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fff8e6;
+  color: #9a6700;
+  font-weight: 700;
+}
+
+.course-rating svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  fill: currentColor;
 }
 
 .course-footer {
@@ -727,8 +806,20 @@ img {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
+}
+
+@media (max-width: 1100px) {
+  .category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .category-card {
@@ -786,8 +877,9 @@ img {
 }
 
 .stars {
-  color: #ffb347;
-  font-size: 0.9rem;
+  color: #2e2e4f;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .testimonial-author {
@@ -863,6 +955,12 @@ img {
   max-width: 640px;
 }
 
+.cta-inner .pill {
+  justify-self: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .cta-actions {
   display: flex;
   justify-content: center;
@@ -874,6 +972,7 @@ img {
   background: #0f0f14;
   color: #c9cbd6;
   padding: 60px 0 30px;
+  margin-top: auto;
 }
 
 .footer-grid {
@@ -888,10 +987,24 @@ img {
   margin-bottom: 10px;
 }
 
+.site-footer .footer-grid > div:first-child .brand {
+  margin-bottom: 22px;
+}
+
+.site-footer .footer-grid > div:first-child p {
+  margin: 0 0 14px;
+}
+
+.site-footer p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .footer-grid a {
   display: block;
   margin-bottom: 6px;
   color: #c9cbd6;
+  font-size: 0.86rem;
 }
 
 .socials {
@@ -900,14 +1013,28 @@ img {
   margin-top: 12px;
 }
 
-.socials span {
+.socials .social-icon {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
   display: grid;
   place-items: center;
-  font-size: 0.75rem;
+  color: #c9cbd6;
+  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.socials .social-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  fill: currentColor;
+}
+
+.socials .social-icon:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .footer-bottom {
@@ -934,16 +1061,28 @@ img {
 
 .auth-page {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
   background: radial-gradient(circle at top left, #eef0ff, transparent 55%),
     #f7f8fc;
-  padding: 40px 20px;
+  padding: 40px 20px 0;
 }
 
 .auth-wrapper {
   width: min(480px, 92vw);
+  align-self: center;
+}
+
+.auth-page .site-footer {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.auth-page.auth-page-2fa .site-footer {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
 }
 
 .back-link {
@@ -987,6 +1126,16 @@ img {
   text-align: center;
   font-family: "Space Grotesk", sans-serif;
   font-size: 2rem;
+}
+
+.auth-qr {
+  margin: 1rem 0;
+}
+
+.auth-qr img {
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
 }
 
 .auth-subtitle {
@@ -1246,6 +1395,24 @@ img {
   flex-direction: column;
 }
 
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .stat-label {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -1274,6 +1441,14 @@ img {
   box-shadow: 0 25px 35px rgba(15, 15, 40, 0.08);
 }
 
+.admin-twin-panels > [class*="col-"] {
+  display: flex;
+}
+
+.admin-twin-panels .dashboard-panel {
+  width: 100%;
+}
+
 .panel-header {
   border-bottom: 1px solid #eceef6;
   padding-bottom: 0.75rem;
@@ -1292,6 +1467,63 @@ img {
   padding-top: 1rem;
   padding-bottom: 1rem;
   color: #24263a;
+}
+
+.purchase-table th {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #858ca2;
+}
+
+.purchase-table td {
+  vertical-align: middle;
+}
+
+.purchase-id {
+  min-width: 92px;
+}
+
+.purchase-id strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #1f2937;
+}
+
+.purchase-id small {
+  color: #6b7280;
+}
+
+.purchase-total {
+  font-weight: 700;
+  color: #111827;
+}
+
+.purchase-refund {
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.purchase-refund.is-none {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.purchase-date {
+  white-space: nowrap;
+  font-size: 0.83rem;
+  color: #6b7280;
+}
+
+.purchase-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.purchase-actions .btn {
+  min-width: 96px;
 }
 
 .admin-table .activity-text {
@@ -1405,7 +1637,7 @@ img {
   min-height: 100vh;
 }
 
-.course-page .container {
+.course-page main .container {
   padding-top: 40px;
   padding-bottom: 60px;
 }
@@ -1507,6 +1739,23 @@ img {
 
 .admin-course-card .course-card-header {
   gap: 1rem;
+  align-items: flex-start;
+}
+
+.admin-course-card .course-card-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-course-card .course-card-header h3 {
+  line-height: 1.35;
+  min-height: 2.7em;
+  max-height: 2.7em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .course-manage-form {
@@ -1676,6 +1925,35 @@ img {
   padding: 40px 0 80px;
 }
 
+.course-page main.my-learning-page .container {
+  padding-top: 0 !important;
+}
+
+.course-page main.cart-page .container {
+  padding-top: 0 !important;
+}
+
+.course-page main.cart-page #checkoutForm .form-select,
+.course-page main.cart-page #checkoutForm .checkout-total-field {
+  height: 46px;
+  border-radius: 12px;
+}
+
+.course-page main.cart-page #checkoutForm .checkout-total-field {
+  display: flex;
+  align-items: center;
+  background: #f7f8fd;
+}
+
+.course-page main.cart-page #checkoutForm #placeOrderBtn {
+  height: 46px;
+  border-radius: 12px;
+}
+
+.course-page main.cart-page #checkoutForm .checkout-notice-host {
+  margin-top: 0.15rem;
+}
+
 .mentor-hero {
   display: flex;
   justify-content: space-between;
@@ -1729,7 +2007,7 @@ img {
 }
 
 .wallet-section {
-  padding: 70px 0 100px;
+  padding: 40px 0 80px;
 }
 
 .wallet-hero {
@@ -1880,7 +2158,7 @@ img {
 .plan-feature-list {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 0.85rem;
   flex: 1;
 }
 
@@ -2032,6 +2310,7 @@ img {
 
   .header-inner {
     flex-wrap: wrap;
+    row-gap: 12px;
   }
 
   .hero-float-left,
@@ -2040,13 +2319,20 @@ img {
   }
 
   .header-middle {
-    flex-direction: column;
-    align-items: stretch;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
   }
 
   .header-middle .search-pill {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
   }
 }
 
@@ -2062,7 +2348,21 @@ img {
 
   .user-pill {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+  }
+
+  .user-pill-actions {
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .user-pill-dashboard {
+    min-width: 0;
+  }
+
+  .user-pill-signout {
+    min-width: 0;
   }
 
   .hero-actions {

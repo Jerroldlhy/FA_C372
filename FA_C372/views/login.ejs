@@ -53,7 +53,7 @@
         <% } %>
         <% if (info?.resent) { %>
           <div class="auth-alert auth-alert-info">
-            Verification email resent—check your inbox.
+            Verification email resent - check your inbox.
           </div>
         <% } %>
         <% if (info?.resend_error === "missing") { %>
@@ -68,7 +68,7 @@
         <% } %>
         <% if (info?.resend === "already_verified") { %>
           <div class="auth-alert auth-alert-success">
-            Email already verified—just log in.
+            Email already verified - just log in.
           </div>
         <% } %>
         <% if (info?.password_reset) { %>
@@ -122,7 +122,7 @@
         </form>
 
         <p class="text-muted small text-center mt-3">
-          Didn’t see the verification email?
+          Didn't see the verification email?
         </p>
         <form method="POST" action="/resend-verification" class="resend-form">
           <input
@@ -139,10 +139,11 @@
         </form>
 
         <p class="auth-footer">
-          Don’t have an account? <a href="/signup">Sign up</a>
+          Don't have an account? <a href="/signup">Sign up</a>
         </p>
       </section>
     </main>
     <script src="/scripts/main.js"></script>
+      <%- include("partials/footer") %>
   </body>
 </html>

@@ -18,16 +18,16 @@
     />
     <link rel="stylesheet" href="/styles/style.css" />
     <style>
-      .courses-hero {
-        border: 1px solid #e8eaf8;
-        border-radius: 20px;
-        padding: 1.5rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f2f6ff 60%, #fff5f7 100%);
-      }
       .courses-filter-panel {
         border-radius: 18px;
         border: 1px solid #e8eaf8;
         background: #ffffff;
+      }
+      .courses-page {
+        padding: 40px 0 80px;
+      }
+      .courses-page .container {
+        padding-top: 0;
       }
       .course-list .course-card {
         border: 1px solid #e6e9f7;
@@ -36,6 +36,50 @@
       }
       .course-list .course-card:hover {
         transform: translateY(-3px);
+      }
+      .course-list .enroll-form {
+        border-top: 1px solid #eceef6;
+        padding-top: 1rem;
+        margin-top: 0.35rem;
+      }
+      .course-list .enroll-form .payment-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 220px;
+      }
+      .course-list .enroll-form .payment-controls .form-select {
+        width: 150px;
+        height: 36px;
+        line-height: 36px;
+        padding-top: 0;
+        padding-bottom: 0;
+        padding-left: 0;
+        padding-right: 0;
+        text-align: center;
+        text-align-last: center;
+        background-image: none;
+      }
+      .course-list .enroll-form .course-actions {
+        margin-left: auto;
+        margin-top: 0.2rem;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .course-list .enroll-form .course-actions .btn {
+        min-width: 112px;
+      }
+      .course-list .enroll-form .course-actions .btn-add-cart {
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #3730a3;
+      }
+      .course-list .enroll-form .course-actions .btn-add-cart:hover {
+        background: #e0e7ff;
+        border-color: #a5b4fc;
+        color: #312e81;
       }
       .course-visibility-note {
         color: #55607a;
@@ -50,28 +94,100 @@
         color: #34405d;
         background: #fafcff;
       }
+      .course-filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+      }
+      .course-filter-form .filter-field {
+        flex: 1 1 120px;
+        min-width: 120px;
+      }
+      .course-filter-form .filter-field .form-control,
+      .course-filter-form .filter-field .form-select {
+        width: 100%;
+        height: 40px;
+        border: 1px solid #dfe3f0;
+        border-radius: 12px;
+        background: #f7f7fb;
+        font-size: 0.85rem;
+      }
+      .course-filter-form .filter-field .form-control {
+        padding: 0.5rem 0.75rem;
+      }
+      .course-filter-form .filter-field .form-select {
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+      }
+      .course-filter-form .filter-action-row {
+        flex: 0 0 110px;
+        display: flex;
+        align-self: flex-end;
+      }
+      .course-filter-form .filter-action {
+        width: 110px;
+      }
+      @media (min-width: 992px) {
+        .course-filter-form {
+          flex-wrap: nowrap;
+        }
+        .course-filter-form .filter-field {
+          min-width: 0;
+          flex: 1 1 0;
+        }
+        .course-filter-form .filter-field:first-child {
+          flex: 1.35 1 0;
+        }
+      }
+      @media (max-width: 768px) {
+        .course-list .enroll-form {
+          align-items: stretch;
+        }
+        .course-list .enroll-form .payment-controls {
+          width: 100%;
+        }
+        .course-list .enroll-form .payment-controls .form-select {
+          width: 100%;
+        }
+        .course-list .enroll-form .course-actions {
+          width: 100%;
+          margin-left: 0;
+        }
+        .course-filter-form .filter-field,
+        .course-filter-form .filter-action-row {
+          flex: 1 1 calc(50% - 0.75rem);
+          min-width: 0;
+        }
+        .course-filter-form .filter-action-row {
+          flex-basis: calc(50% - 0.75rem);
+          justify-content: flex-end;
+        }
+        .course-filter-form .filter-action {
+          width: 100%;
+        }
+      }
     </style>
   </head>
   <body>
     <%- include("partials/navbar") %>
-    <main class="section course-page">
+    <main class="section course-page courses-page">
       <div class="container">
-        <div class="course-hero courses-hero mb-4">
+        <header class="mentor-hero mb-4">
           <div>
-            <p class="eyebrow text-uppercase text-muted mb-2">Course Hub</p>
-            <h1 class="display-5 fw-bold mb-2">Browse courses</h1>
+            <p class="eyebrow text-uppercase text-muted mb-1">Course Hub</p>
+            <h1 class="display-5 fw-bold">Browse courses</h1>
             <p class="lead text-muted">
               Explore all available courses, then narrow down by topic, level,
               language, or price in one place.
             </p>
             <% if (currentUser && currentUser.role === "student") { %>
               <div class="d-flex flex-wrap gap-2 mt-3">
-                <a class="btn btn-outline btn-sm" href="/cart">Go to cart</a>
-                <a class="btn btn-outline btn-sm" href="/learning">My learning</a>
+                <a class="btn btn-outline btn-sm" href="/cart">Go to Cart</a>
+                <a class="btn btn-outline btn-sm" href="/learning">My Learning</a>
               </div>
             <% } %>
           </div>
-        </div>
+        </header>
 
         <% if (status?.course_created) { %>
           <div class="alert alert-success">Course published.</div>
@@ -130,12 +246,16 @@
 
         <div class="dashboard-panel card courses-filter-panel mb-4">
           <div class="card-body">
-            <form class="row g-2 align-items-end" id="courseFilterForm" autocomplete="off">
-              <div class="col-12 col-md-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <p class="course-visibility-note mb-0" id="courseVisibilityText"></p>
+              <button class="btn btn-sm btn-outline-secondary" id="clearFilters" type="button">Clear</button>
+            </div>
+            <form class="course-filter-form" id="courseFilterForm" autocomplete="off">
+              <div class="filter-field">
                 <label class="form-label small" for="q">Search</label>
-                <input class="form-control form-control-sm" id="q" name="q" value="<%= filters?.q || '' %>" placeholder="Course name or keyword" />
+                <input class="form-control form-control-sm" id="q" name="q" value="<%= filters?.q || '' %>" placeholder="Course Name" />
               </div>
-              <div class="col-6 col-md-2">
+              <div class="filter-field">
                 <label class="form-label small" for="categoryFilter">Category</label>
                 <select class="form-select form-select-sm" id="categoryFilter" name="category">
                   <option value="">All</option>
@@ -144,7 +264,7 @@
                   <% }); %>
                 </select>
               </div>
-              <div class="col-6 col-md-2">
+              <div class="filter-field">
                 <label class="form-label small" for="levelFilter">Level</label>
                 <select class="form-select form-select-sm" id="levelFilter" name="level">
                   <option value="">All</option>
@@ -153,7 +273,7 @@
                   <% }); %>
                 </select>
               </div>
-              <div class="col-6 col-md-2">
+              <div class="filter-field">
                 <label class="form-label small" for="languageFilter">Language</label>
                 <select class="form-select form-select-sm" id="languageFilter" name="language">
                   <option value="">All</option>
@@ -162,22 +282,20 @@
                   <% }); %>
                 </select>
               </div>
-              <div class="col-6 col-md-1">
+              <div class="filter-field">
                 <label class="form-label small" for="minPrice">Min</label>
                 <input class="form-control form-control-sm" id="minPrice" name="min_price" type="number" min="0" step="0.01" value="<%= filters?.minPrice || '' %>" />
               </div>
-              <div class="col-6 col-md-1">
+              <div class="filter-field">
                 <label class="form-label small" for="maxPrice">Max</label>
                 <input class="form-control form-control-sm" id="maxPrice" name="max_price" type="number" min="0" step="0.01" value="<%= filters?.maxPrice || '' %>" />
               </div>
-              <div class="col-6 col-md-1 d-grid">
-                <button class="btn btn-sm btn-primary" type="submit">Filter</button>
-              </div>
-              <div class="col-6 col-md-1 d-grid">
-                <button class="btn btn-sm btn-outline-secondary" id="clearFilters" type="button">Clear</button>
+              <div class="filter-action-row">
+                <div class="filter-action d-grid">
+                  <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+                </div>
               </div>
             </form>
-            <p class="course-visibility-note mt-2 mb-0" id="courseVisibilityText"></p>
           </div>
         </div>
 
@@ -239,40 +357,44 @@
 
                   <% if (isStudent) { %>
                     <form
-                      class="enroll-form d-flex flex-wrap align-items-center gap-2 mb-2"
+                      class="enroll-form d-flex flex-wrap align-items-end gap-2 mb-3"
                       method="POST"
                       action="/courses/<%= course.id %>/enroll"
                     >
-                      <label class="text-muted small mb-0 me-2">Payment</label>
-                      <select
-                        class="form-select form-select-sm"
-                        name="payment_method"
-                        aria-label="Payment method"
-                      >
-                        <option value="wallet">Wallet</option>
-                      </select>
-                      <button
-                        class="btn btn-primary btn-sm"
-                        type="submit"
-                        <%= enrolled || proBlocked ? "disabled" : "" %>
-                      >
-                        <%= enrolled ? "Enrolled" : "Enroll" %>
-                      </button>
-                    </form>
-                    <form
-                      class="d-flex align-items-center gap-2 mb-3"
-                      method="POST"
-                      action="/courses/<%= course.id %>/cart"
-                    >
-                      <button class="btn btn-outline-secondary btn-sm" type="submit" <%= inCart || proBlocked ? "disabled" : "" %>>
-                        <%= inCart ? "In Cart" : "Add to cart" %>
-                      </button>
+                      <div class="payment-controls">
+                        <label class="text-muted small mb-0" for="payment-method-<%= course.id %>">Payment</label>
+                        <select
+                          class="form-select form-select-sm"
+                          id="payment-method-<%= course.id %>"
+                          name="payment_method"
+                          aria-label="Payment method"
+                        >
+                          <option value="wallet">Wallet</option>
+                        </select>
+                      </div>
+                      <div class="course-actions">
+                        <button
+                          class="btn btn-primary btn-sm"
+                          type="submit"
+                          <%= enrolled || proBlocked ? "disabled" : "" %>
+                        >
+                          <%= enrolled ? "Enrolled" : "Enroll" %>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-add-cart"
+                          type="submit"
+                          formaction="/courses/<%= course.id %>/cart"
+                          formmethod="POST"
+                          <%= inCart || proBlocked ? "disabled" : "" %>
+                        >
+                          <%= inCart ? "In Cart" : "Add to Cart" %>
+                        </button>
+                      </div>
                     </form>
                     <% if (proBlocked) { %>
                       <p class="text-muted small mb-3">Pro subscription required to enroll.</p>
                     <% } %>
                     <% if (enrolled) { %>
-                      <p class="text-success small mb-3">You can now leave a review below.</p>
                       <form
                         class="review-form mb-3"
                         method="POST"
@@ -300,7 +422,8 @@
                               placeholder="Share your thoughts"
                             />
                           </div>
-                          <div class="col-12 text-end">
+                          <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <p class="text-success small mb-0">You can now leave a review below.</p>
                             <button class="btn btn-outline-primary btn-sm" type="submit">
                               Submit review
                             </button>
@@ -437,6 +560,6 @@
         applyFilters();
       })();
     </script>
+      <%- include("partials/footer") %>
   </body>
 </html>
-

@@ -51,14 +51,24 @@
               />
             </div>
             <div class="hero-float hero-float-left">
-              <div class="float-icon"></div>
+              <div class="float-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="7" width="12" height="10" rx="2"></rect>
+                  <path d="M15 10l6-3v10l-6-3z"></path>
+                </svg>
+              </div>
               <div>
                 <strong>Live Classes</strong>
                 <span>Interactive sessions</span>
               </div>
             </div>
             <div class="hero-float hero-float-right">
-              <div class="float-icon"></div>
+              <div class="float-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="5"></circle>
+                  <path d="M8.2 13.9L7 22l5-3 5 3-1.2-8.1"></path>
+                </svg>
+              </div>
               <div>
                 <strong>Verified Certs</strong>
                 <span>Shareable credentials</span>
@@ -100,10 +110,15 @@
                   </div>
                   <div class="course-body">
                     <h3><%= course.course_name %></h3>
-                    <p><%= course.category || "General" %></p>
+                    <p class="course-category"><%= course.category || "General" %></p>
                     <div class="course-meta">
-                      <span>By <%= course.instructor_name || "EduSphere Team" %></span>
-                      <span>4.8</span>
+                      <span class="course-instructor">By <%= course.instructor_name || "EduSphere Team" %></span>
+                      <span class="course-rating" aria-label="Rated 4.8 out of 5">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+                        </svg>
+                        4.8
+                      </span>
                     </div>
                     <div class="course-footer">
                       <strong>$<%= Number(course.price).toFixed(2) %></strong>
@@ -197,7 +212,7 @@
           </div>
           <div class="testimonial-grid">
             <article class="testimonial-card">
-              <div class="stars">?????</div>
+              <div class="stars">Best Learning Experience</div>
               <p>
                 EduSphere is the most enjoyable learning experience. The courses
                 are well structured and the instructors are amazing.
@@ -205,13 +220,12 @@
               <div class="testimonial-author">
                 <div class="avatar">JM</div>
                 <div>
-                  <strong>Jessica Miller</strong>
-                  <span>Product Designer</span>
+                  <strong>Jessica Miller, Product Designer</strong>
                 </div>
               </div>
             </article>
             <article class="testimonial-card">
-              <div class="stars">?????</div>
+              <div class="stars">Career Pivot Success</div>
               <p>
                 The business courses helped me pivot into management. The
                 assignments and real-world projects were a game changer.
@@ -219,13 +233,12 @@
               <div class="testimonial-author">
                 <div class="avatar">DP</div>
                 <div>
-                  <strong>David Park</strong>
-                  <span>Operations Lead</span>
+                  <strong>David Park, Operations Lead</strong>
                 </div>
               </div>
             </article>
             <article class="testimonial-card">
-              <div class="stars">?????</div>
+              <div class="stars">Landed My First Dev Role</div>
               <p>
                 I landed my first dev role after finishing the full stack track.
                 The learning path made it easy to stay focused.
@@ -233,8 +246,7 @@
               <div class="testimonial-author">
                 <div class="avatar">MP</div>
                 <div>
-                  <strong>Maria Rodriguez</strong>
-                  <span>Software Engineer</span>
+                  <strong>Maria Rodrigo, Software Engineer</strong>
                 </div>
               </div>
             </article>
@@ -306,61 +318,6 @@
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-grid">
-        <div>
-          <div class="brand">
-            <span class="brand-dot"></span>
-            <span>EduSphere</span>
-          </div>
-          <p>
-            Empowering learners worldwide with practical skills and expert-led
-            courses.
-          </p>
-          <div class="socials">
-            <span>in</span>
-            <span>tw</span>
-            <span>yt</span>
-            <span>ig</span>
-          </div>
-        </div>
-        <div>
-          <h4>Product</h4>
-          <a href="#">Courses</a>
-          <a href="#">Pricing</a>
-          <a href="#">Updates</a>
-          <a href="#">Blog</a>
-        </div>
-        <div>
-          <h4>Company</h4>
-          <a href="#">About</a>
-          <a href="#">Careers</a>
-          <a href="#">Press</a>
-          <a href="#">Partners</a>
-        </div>
-        <div>
-          <h4>Support</h4>
-          <a href="#">Help Center</a>
-          <a href="#">Contact</a>
-          <a href="#">Status</a>
-          <a href="#">Terms</a>
-        </div>
-        <div>
-          <h4>Community</h4>
-          <a href="#">Events</a>
-          <a href="#">Forums</a>
-          <a href="#">Affiliates</a>
-          <a href="#">Scholarships</a>
-        </div>
-      </div>
-      <div class="container footer-bottom">
-        <span>Copyright 2026 EduSphere. All rights reserved.</span>
-        <div class="footer-links">
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
-          <a href="#">Sitemap</a>
-        </div>
-      </div>
-    </footer>
+    <%- include("partials/footer") %>
   </body>
 </html>

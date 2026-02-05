@@ -6,7 +6,7 @@
     <title>EduSphere | Security 2FA</title>
     <link rel="stylesheet" href="/styles/style.css" />
   </head>
-  <body class="auth-page">
+  <body class="auth-page auth-page-2fa">
     <main class="auth-wrapper">
       <a class="back-link" href="/">&larr; Back</a>
       <section class="auth-card">
@@ -38,8 +38,8 @@
         <% } %>
 
         <% if (qrCodeDataURL) { %>
-          <div style="text-align:center; margin: 1rem 0;">
-            <img src="<%= qrCodeDataURL %>" alt="2FA QR code" style="max-width: 220px; width: 100%;" />
+          <div class="auth-qr">
+            <img src="<%= qrCodeDataURL %>" alt="2FA QR code" />
           </div>
           <div class="auth-alert auth-alert-info">
             Manual key: <code><%= manualKey %></code>
@@ -63,5 +63,6 @@
         </form>
       </section>
     </main>
+      <%- include("partials/footer") %>
   </body>
 </html>

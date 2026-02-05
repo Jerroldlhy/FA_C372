@@ -35,23 +35,23 @@
           </p>
         </div>
         <div class="hero-cta">
-          <a class="text-link me-3" href="/">Back to catalog</a>
+          <a class="text-link me-3" href="/">Back to Catalog</a>
           <form method="POST" action="/logout" class="d-inline">
             <button class="btn btn-outline-secondary btn-sm" type="submit">
-              Sign out
+              Sign Out
             </button>
           </form>
         </div>
       </section>
       <section class="dashboard-panel card shadow-sm mb-4">
         <div class="card-body d-flex flex-wrap gap-2">
-          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/sales">View sales report</a>
-          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/fraud">View fraud audit</a>
-          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/audit">View audit logs</a>
-          <a class="btn btn-outline-secondary btn-sm" href="/admin/refunds">Manage refunds</a>
-          <a class="btn btn-outline-secondary btn-sm" href="#add-course-form">Add new course</a>
-          <a class="btn btn-outline-secondary btn-sm" href="#users-panel">Manage users</a>
-          <a class="btn btn-outline-secondary btn-sm" href="#courses-panel">Manage courses</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/sales">View Sales Report</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/fraud">View Fraud Audit</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/reports/audit">View Audit Logs</a>
+          <a class="btn btn-outline-secondary btn-sm" href="/admin/refunds">Manage Refunds</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#add-course-form">Add New Course</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#users-panel">Manage Users</a>
+          <a class="btn btn-outline-secondary btn-sm" href="#courses-panel">Manage Courses</a>
         </div>
       </section>
 
@@ -109,23 +109,23 @@
         <div class="alert alert-warning">PDF export dependency is missing. Run npm install to install project dependencies.</div>
       <% } %>
 
-      <section class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
-        <article class="stat-card col">
+      <section class="admin-stats-grid mb-4">
+        <article class="stat-card">
           <p class="stat-label">Registered users</p>
           <p class="stat-value"><%= totalUsers %></p>
           <p class="stat-note">Active accounts</p>
         </article>
-        <article class="stat-card col">
+        <article class="stat-card">
           <p class="stat-label">Courses available</p>
-          <p class="stat-value"><%= totalCourses %></p>
+          <p class="stat-value" data-course-count><%= totalCourses %></p>
           <p class="stat-note">Curated catalogue</p>
         </article>
-        <article class="stat-card col">
+        <article class="stat-card">
           <p class="stat-label">Total revenue</p>
           <p class="stat-value">$<%= totalRevenue.toFixed(2) %></p>
           <p class="stat-note"><%= totalTransactions %> recorded payments</p>
         </article>
-        <article class="stat-card col">
+        <article class="stat-card">
           <p class="stat-label">Pending actions</p>
           <p class="stat-value"><%= pendingTransactions %></p>
           <p class="stat-note">Awaiting review</p>
@@ -239,9 +239,9 @@
         </form>
       </section>
 
-      <div class="row g-4">
+      <div class="row g-4 admin-twin-panels">
         <section class="col-12 col-xl-6" id="users-panel">
-          <div class="dashboard-panel card shadow-sm">
+          <div class="dashboard-panel card shadow-sm h-100">
             <div class="panel-header d-flex justify-content-between align-items-center mb-3">
               <h2 class="h5 mb-0">Registered Users</h2>
               <span class="text-muted small">
@@ -305,7 +305,7 @@
         </section>
 
         <section class="col-12 col-xl-6" id="add-course-form">
-          <div class="dashboard-panel card shadow-sm">
+          <div class="dashboard-panel card shadow-sm h-100">
             <div class="panel-header mb-3">
               <h2 class="h5 mb-0">Add a Course</h2>
               <p class="text-muted small mb-0">
@@ -377,7 +377,7 @@
         <div class="panel-header d-flex justify-content-between align-items-center mb-3">
           <h2 class="h5 mb-0">Manage Courses</h2>
           <span class="text-muted small">
-            <%= totalCourses %> active listings
+            <span data-course-count><%= totalCourses %></span> active listings
           </span>
         </div>
         <div class="mb-3">
@@ -469,8 +469,7 @@
               <form
                 method="POST"
                 action="/admin/courses/<%= course.id %>/delete"
-                class="text-end mt-2"
-                onsubmit="return confirm('Delete this course?');"
+                class="text-end mt-2 admin-course-delete-form"
               >
                 <button class="btn btn-sm btn-outline-danger" type="submit">
                   Delete course
@@ -478,6 +477,9 @@
               </form>
             </article>
             <% }); %>
+          </div>
+          <div class="empty-state text-center d-none" id="adminCoursesEmptyState">
+            No courses to manage yet.
           </div>
         <% } %>
       </section>
@@ -633,7 +635,23 @@
       }
 
       const courseSearch = document.getElementById("adminCourseSearch");
-      const courseCards = Array.from(document.querySelectorAll(".admin-course-card"));
+      let courseCards = Array.from(document.querySelectorAll(".admin-course-card"));
+      const courseGrid = document.querySelector("#courses-panel .course-grid");
+      const coursesEmptyState = document.getElementById("adminCoursesEmptyState");
+      const courseCountNodes = Array.from(document.querySelectorAll("[data-course-count]"));
+
+      function refreshCourseArea() {
+        const remainingCards = courseCards.filter((card) => card.isConnected);
+        if (courseGrid) courseGrid.classList.toggle("d-none", remainingCards.length === 0);
+        if (coursesEmptyState) coursesEmptyState.classList.toggle("d-none", remainingCards.length > 0);
+      }
+
+      function updateCourseCounts(nextCount) {
+        courseCountNodes.forEach((node) => {
+          node.textContent = String(Math.max(0, nextCount));
+        });
+      }
+
       if (courseSearch && courseCards.length) {
         courseSearch.addEventListener("input", () => {
           const q = String(courseSearch.value || "").trim().toLowerCase();
@@ -644,6 +662,49 @@
         });
       }
 
+      document.querySelectorAll(".admin-course-delete-form").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (!window.confirm("Delete this course?")) return;
+
+          const button = form.querySelector('button[type="submit"]');
+          const card = form.closest(".admin-course-card");
+          const originalLabel = button ? button.textContent : "";
+          if (button) {
+            button.disabled = true;
+            button.textContent = "Deleting...";
+          }
+
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              credentials: "same-origin",
+              headers: { "X-Requested-With": "fetch" },
+            });
+
+            if (response.redirected && response.url.includes("/login")) {
+              window.location.href = response.url;
+              return;
+            }
+            if (!response.ok) throw new Error("Delete failed");
+
+            if (card) {
+              card.remove();
+              courseCards = courseCards.filter((item) => item !== card);
+            }
+            updateCourseCounts(courseCards.length);
+            refreshCourseArea();
+          } catch (err) {
+            if (button) {
+              button.disabled = false;
+              button.textContent = originalLabel;
+            }
+            alert("Could not delete the course. Please try again.");
+          }
+        });
+      });
+
       document.querySelectorAll(".user-row").forEach((row) => {
         row.addEventListener("click", (event) => {
           if (event.target.closest("button, a, select, input, form, textarea, label")) return;
@@ -652,5 +713,6 @@
         });
       });
     </script>
+      <%- include("partials/footer") %>
   </body>
 </html>

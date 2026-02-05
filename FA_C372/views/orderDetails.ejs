@@ -41,7 +41,7 @@
             <p class="text-muted small mb-1">Total</p>
             <strong class="display-6">$<%= Number(order.total_amount || 0).toFixed(2) %></strong>
             <p class="text-muted small mb-0 text-capitalize">
-              <%= order.payment_status %> · <%= order.order_status %>
+              <%= order.payment_status %> | <%= order.order_status %>
             </p>
             <% if (Number(order.refunded_amount || 0) > 0) { %>
               <p class="text-muted small mb-0">Refunded: $<%= Number(order.refunded_amount || 0).toFixed(2) %></p>
@@ -88,5 +88,6 @@
         </div>
       </div>
     </main>
+      <%- include("partials/footer") %>
   </body>
 </html>

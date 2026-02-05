@@ -14,13 +14,13 @@
   </head>
   <body class="course-page">
     <%- include("partials/navbar") %>
-    <main class="section">
+    <main class="section mentor-section cart-page">
       <div class="container">
         <div class="course-hero mb-4">
           <div>
-            <p class="eyebrow text-uppercase text-muted mb-2">Checkout</p>
-            <h1 class="display-6 fw-bold mb-1">Your Cart</h1>
-            <p class="text-muted mb-0">Review selected courses before payment.</p>
+            <p class="eyebrow text-uppercase text-muted mb-1">Checkout</p>
+            <h1 class="display-5 fw-bold">Your Cart</h1>
+            <p class="lead text-muted">Review selected courses before payment.</p>
           </div>
           <div class="course-hero-card">
             <p class="text-muted small mb-1">Items</p>
@@ -185,7 +185,7 @@
               <% } %>
             </div>
 
-            <form class="row g-2" method="POST" action="/checkout" id="checkoutForm">
+            <form class="row g-2 align-items-end" method="POST" action="/checkout" id="checkoutForm">
               <div class="col-12 col-md-4" id="checkoutMethodField">
                 <label class="form-label small" for="payment_method">Payment method</label>
                 <select class="form-select" id="payment_method" name="payment_method">
@@ -196,13 +196,14 @@
                 </select>
               </div>
               <div class="col-12 col-md-4">
-                <label class="form-label small">&nbsp;</label>
-                <div class="form-control text-muted">Total: <%= currencySymbol %><%= Number(convertedTotal || 0).toFixed(2) %> <%= currency %></div>
+                <label class="form-label small invisible" aria-hidden="true">Total</label>
+                <div class="form-control text-muted checkout-total-field">Total: <%= currencySymbol %><%= Number(convertedTotal || 0).toFixed(2) %> <%= currency %></div>
               </div>
-              <div class="col-12 col-md-4 d-grid">
-                <label class="form-label small">&nbsp;</label>
+              <div class="col-12 col-md-4 d-grid checkout-action-field">
+                <label class="form-label small invisible">Place order</label>
                 <button class="btn btn-gradient" id="placeOrderBtn" type="submit">Place order</button>
               </div>
+              <div class="col-12 checkout-notice-host" id="checkoutNoticeHost"></div>
             </form>
           <% } %>
         </div>
@@ -228,12 +229,13 @@
       const methodSelect = document.getElementById("payment_method");
       const methodButtons = document.querySelectorAll("[data-method]");
       const checkoutMethodField = document.getElementById("checkoutMethodField");
+      const checkoutNoticeHost = document.getElementById("checkoutNoticeHost");
       const checkoutForm = document.getElementById("checkoutForm");
       const placeOrderBtn = document.getElementById("placeOrderBtn");
       const paypalMsg = document.getElementById("paypal-msg");
       const activePaymentMethod = "<%= String(activePayment?.method || '').toLowerCase() %>";
       const paymentNotice = document.createElement("div");
-      paymentNotice.className = "text-muted small mt-2";
+      paymentNotice.className = "text-muted small mb-0";
       const actionSections = {
         wallet: document.getElementById("actionWallet"),
         paypal: document.getElementById("actionPaypal"),
@@ -270,8 +272,9 @@
           btn.classList.toggle("btn-outline", !active);
         });
 
-        if (checkoutMethodField && !paymentNotice.isConnected) {
-          checkoutMethodField.appendChild(paymentNotice);
+        if (!paymentNotice.isConnected) {
+          if (checkoutNoticeHost) checkoutNoticeHost.appendChild(paymentNotice);
+          else if (checkoutMethodField) checkoutMethodField.appendChild(paymentNotice);
         }
         paymentNotice.textContent =
           method === "wallet"
@@ -368,5 +371,6 @@
         });
       }
     </script>
+      <%- include("partials/footer") %>
   </body>
 </html>

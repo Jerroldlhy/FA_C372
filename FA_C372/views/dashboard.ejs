@@ -34,11 +34,19 @@
 
       .mini-wallet {
         margin-top: 1.25rem;
-        max-width: 320px;
-        background: #ffffff;
-        border: 1px solid #e6e9f5;
-        border-radius: 16px;
-        padding: 1rem 1.15rem;
+        max-width: 340px;
+        background: linear-gradient(145deg, #ffffff 0%, #f8f9ff 100%);
+        border: 1px solid #dfe3f7;
+        border-radius: 18px;
+        padding: 1rem 1.1rem;
+        box-shadow: 0 14px 28px rgba(34, 43, 89, 0.08);
+      }
+
+      .mini-wallet-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.4rem;
       }
 
       .mini-wallet .label {
@@ -47,6 +55,35 @@
         letter-spacing: 0.08em;
         color: #8a8fa4;
         font-weight: 700;
+      }
+
+      .mini-wallet-chip {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #4338ca;
+        background: #e8eaff;
+        border: 1px solid #c7d2fe;
+        border-radius: 999px;
+        padding: 0.15rem 0.55rem;
+      }
+
+      .mini-wallet-amount {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1f2937;
+        line-height: 1.05;
+        margin-bottom: 0.45rem;
+      }
+
+      .mini-wallet-usd {
+        font-size: 0.78rem;
+        color: #6b7280;
+      }
+
+      .mini-wallet-usd span {
+        font-weight: 700;
+        color: #374151;
       }
 
       .tabs-strip {
@@ -173,6 +210,71 @@
         color: #858ca2;
       }
 
+      .refund-table th {
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #858ca2;
+      }
+
+      .refund-table td {
+        font-size: 0.81rem;
+        color: #4b5563;
+      }
+
+      .purchase-history-table th {
+        font-size: 0.73rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .purchase-history-table td {
+        font-size: 0.79rem;
+        color: #4b5563;
+      }
+
+      .purchase-history-table .purchase-id {
+        min-width: 74px;
+      }
+
+      .purchase-history-table .purchase-id strong {
+        font-size: 0.78rem;
+      }
+
+      .purchase-history-table .purchase-id small {
+        font-size: 0.68rem;
+      }
+
+      .purchase-history-table .purchase-date {
+        white-space: normal;
+        font-size: 0.74rem;
+      }
+
+      .purchase-history-table .purchase-actions {
+        gap: 0.3rem;
+      }
+
+      .purchase-history-table .purchase-actions .btn {
+        min-width: 0;
+        padding: 0.22rem 0.52rem;
+        font-size: 0.68rem;
+      }
+
+      .tx-table td {
+        font-size: 0.82rem;
+        color: #4b5563;
+      }
+
+      .tx-table td:first-child {
+        font-size: 0.78rem;
+        color: #6b7280;
+      }
+
+      .tx-table .status-badge {
+        font-size: 0.68rem;
+        padding: 0.1rem 0.65rem;
+      }
+
       @media (max-width: 991px) {
         .student-shell {
           padding-top: 1.25rem;
@@ -202,9 +304,12 @@
               </p>
 
               <div class="mini-wallet panel-soft">
-                <p class="label mb-1">Wallet Balance</p>
-                <strong class="display-6 d-block mb-1"><%= currencySymbol %><%= Number(walletDisplayBalance || 0).toFixed(2) %></strong>
-                <p class="text-muted small mb-0">Estimated USD <%= Number(walletBalance || 0).toFixed(2) %></p>
+                <div class="mini-wallet-top">
+                  <p class="label mb-0">Wallet Balance</p>
+                  <span class="mini-wallet-chip">Live</span>
+                </div>
+                <strong class="mini-wallet-amount d-block"><%= currencySymbol %><%= Number(walletDisplayBalance || 0).toFixed(2) %></strong>
+                <p class="mini-wallet-usd mb-0">Estimated USD <span><%= Number(walletBalance || 0).toFixed(2) %></span></p>
               </div>
             </section>
 
@@ -293,10 +398,10 @@
                 </div>
               <% } else { %>
                 <div class="table-responsive">
-                  <table class="table align-middle mb-0">
+                  <table class="table align-middle mb-0 purchase-table purchase-history-table">
                     <thead>
                       <tr>
-                        <th>Order #</th>
+                        <th>Invoice</th>
                         <th>Total</th>
                         <th>Refunded</th>
                         <th>Payment</th>
@@ -308,9 +413,18 @@
                     <tbody>
                       <% orders.slice(0, 6).forEach(function(order) { %>
                         <tr>
-                          <td><%= order.id %></td>
-                          <td>$<%= Number(order.total_amount || 0).toFixed(2) %></td>
-                          <td>$<%= Number(order.refunded_amount || 0).toFixed(2) %></td>
+                          <td class="purchase-id">
+                            <strong>INV-<%= order.id %></strong>
+                            <small>Order #<%= order.id %></small>
+                          </td>
+                          <td class="purchase-total">$<%= Number(order.total_amount || 0).toFixed(2) %></td>
+                          <td>
+                            <% if (Number(order.refunded_amount || 0) > 0) { %>
+                              <span class="purchase-refund">$<%= Number(order.refunded_amount || 0).toFixed(2) %></span>
+                            <% } else { %>
+                              <span class="purchase-refund is-none">$0.00</span>
+                            <% } %>
+                          </td>
                           <td class="text-capitalize">
                             <span class="status-badge <%= order.payment_status === 'paid' ? 'status-badge-success' : 'status-badge-warning' %>">
                               <%= order.payment_status %>
@@ -321,10 +435,14 @@
                               <%= order.order_status %>
                             </span>
                           </td>
-                          <td><%= order.created_at ? new Date(order.created_at).toLocaleString() : "" %></td>
-                          <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" href="/orders/<%= order.id %>">View</a>
-                            <a class="btn btn-sm btn-outline-secondary" href="/orders/<%= order.id %>?download=invoice">Invoice PDF</a>
+                          <td class="purchase-date">
+                            <%= order.created_at ? new Date(order.created_at).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-" %>
+                          </td>
+                          <td>
+                            <div class="purchase-actions">
+                              <a class="btn btn-sm btn-outline-primary" href="/orders/<%= order.id %>">View</a>
+                              <a class="btn btn-sm btn-outline-secondary" href="/orders/<%= order.id %>?download=invoice">PDF</a>
+                            </div>
                           </td>
                         </tr>
                       <% }); %>
@@ -343,7 +461,7 @@
                 <div class="empty-state">No refund requests yet.</div>
               <% } else { %>
                 <div class="table-responsive">
-                  <table class="table align-middle mb-0">
+                  <table class="table align-middle mb-0 refund-table">
                     <thead>
                       <tr>
                         <th>Request #</th>
@@ -507,5 +625,6 @@
         setActive(initialHash);
       })();
     </script>
+      <%- include("partials/footer") %>
   </body>
 </html>
