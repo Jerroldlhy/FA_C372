@@ -14,6 +14,7 @@ const {
   enrollStudentWithPayment,
   WalletError,
   ExternalCheckoutRequiredError,
+  CourseAvailabilityError,
 } = require("../models/paymentModel");
 const { getCartItemsForUser } = require("../models/cartModel");
 const { logUserActivity } = require("../models/userActivityModel");
@@ -240,6 +241,9 @@ const handleEnroll = async (req, res, next) => {
     }
     if (err instanceof ExternalCheckoutRequiredError) {
       return res.redirect("/courses?enroll_error=external_checkout");
+    }
+    if (err instanceof CourseAvailabilityError) {
+      return res.redirect("/courses?enroll_error=out_of_stock");
     }
     next(err);
   }

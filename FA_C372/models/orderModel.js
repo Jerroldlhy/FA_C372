@@ -8,9 +8,25 @@ class CheckoutError extends Error {
   }
 }
 
+const ensureRefundColumns = async () => {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'orders'
+       AND COLUMN_NAME = 'refunded_amount'
+     LIMIT 1`
+  );
+  if (!rows.length) {
+    await pool.query(
+      "ALTER TABLE orders ADD COLUMN refunded_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER total_amount"
+    );
+  }
+};
+
 const getOrdersByUser = async (userId) => {
   const [rows] = await pool.query(
-    `SELECT id, total_amount, payment_status, order_status, created_at
+    `SELECT id, total_amount, refunded_amount, payment_status, order_status, created_at
      FROM orders
      WHERE user_id = ?
      ORDER BY created_at DESC`,
@@ -21,7 +37,7 @@ const getOrdersByUser = async (userId) => {
 
 const getOrderByIdForUser = async (orderId, userId) => {
   const [orders] = await pool.query(
-    `SELECT id, user_id, total_amount, payment_status, order_status, created_at
+    `SELECT id, user_id, total_amount, refunded_amount, payment_status, order_status, created_at
      FROM orders
      WHERE id = ? AND user_id = ?
      LIMIT 1`,
@@ -40,7 +56,34 @@ const getOrderByIdForUser = async (orderId, userId) => {
   return { ...order, items };
 };
 
-const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
+const getOrderPaymentForUser = async (orderId, userId) => {
+  const [rows] = await pool.query(
+    `SELECT
+       o.id AS order_id,
+       o.user_id,
+       o.total_amount,
+       o.refunded_amount,
+       o.payment_status,
+       o.order_status,
+       p.id AS payment_id,
+       p.method,
+       p.provider_txn_id,
+       p.amount AS payment_amount,
+       p.status AS payment_record_status
+     FROM orders o
+     LEFT JOIN payments p
+       ON p.order_id = o.id
+      AND p.user_id = o.user_id
+     WHERE o.id = ?
+       AND o.user_id = ?
+     ORDER BY p.created_at DESC
+     LIMIT 1`,
+    [orderId, userId]
+  );
+  return rows[0] || null;
+};
+
+const createOrderFromCart = async (userId, paymentMethod = "wallet", paymentContext = {}) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -114,6 +157,19 @@ const createOrderFromCart = async (userId, paymentMethod = "wallet") => {
       [userId, total]
     );
     const orderId = orderResult.insertId;
+
+    const externalPaymentMethods = new Set(["paypal", "stripe"]);
+    if (externalPaymentMethods.has(paymentMethod) && !paymentContext.providerTxnId) {
+      throw new CheckoutError("payment_reference_missing", "Payment reference is missing.");
+    }
+
+    if (paymentMethod === "wallet" || paymentMethod === "paypal" || paymentMethod === "stripe") {
+      await connection.query(
+        `INSERT INTO payments (order_id, user_id, method, provider_txn_id, amount, status)
+         VALUES (?, ?, ?, ?, ?, 'completed')`,
+        [orderId, userId, paymentMethod, paymentContext.providerTxnId || null, total]
+      );
+    }
 
     for (const item of purchasableCourses) {
       await connection.query(
@@ -212,10 +268,12 @@ const getLecturerMonthlyRevenue = async (lecturerId, months = 6) => {
 };
 
 module.exports = {
+  ensureRefundColumns,
   CheckoutError,
   createOrderFromCart,
   getOrdersByUser,
   getOrderByIdForUser,
+  getOrderPaymentForUser,
   getLecturerRevenueSummary,
   getLecturerMonthlyRevenue,
 };

@@ -1,7 +1,10 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 const {
   getUserByEmail,
+  getUserWithTwoFactorById,
   createUser,
   updateVerificationToken,
   markEmailVerified,
@@ -9,8 +12,10 @@ const {
   setPasswordResetToken,
   getUserByPasswordResetToken,
   updatePasswordByUserId,
+  enableTwoFactor,
+  disableTwoFactor,
 } = require("../models/userModel");
-const { sendVerificationEmail, sendPasswordResetEmail } = require("../services/emailService");
+const { sendVerificationEmail, sendPasswordResetEmail, sendMail } = require("../services/emailService");
 const { logUserActivity } = require("../models/userActivityModel");
 
 const requireEmailVerification =
@@ -18,6 +23,17 @@ const requireEmailVerification =
 
 const showLogin = (req, res) => {
   res.render("login", { error: null, info: req.query });
+};
+
+const showLogin2FA = (req, res) => {
+  if (!req.session?.pending2FAUserId) {
+    return res.redirect("/login");
+  }
+  return res.render("login2fa", {
+    error: null,
+    info: req.query,
+    email: req.session.pending2FAUserEmail || "",
+  });
 };
 
 const showSignup = (req, res) => {
@@ -66,7 +82,18 @@ const login = async (req, res, next) => {
     if (!isValid) {
       return res.status(401).render("login", { error: "Invalid email or password.", info: null });
     }
-    req.session.user = { id: user.id, role: user.role, name: user.name };
+
+    const hasTwoFactor = Number(user.is_2fa_enabled || 0) === 1 && Boolean(user.twofactor_secret);
+    if (hasTwoFactor) {
+      req.session.pending2FAUserId = user.id;
+      req.session.pending2FAUserEmail = user.email;
+      await new Promise((resolve, reject) => {
+        req.session.save((err) => (err ? reject(err) : resolve()));
+      });
+      return res.redirect("/login/2fa");
+    }
+
+    req.session.user = { id: user.id, role: user.role, name: user.name, is_2fa_enabled: Number(user.is_2fa_enabled || 0) };
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
@@ -82,6 +109,148 @@ const login = async (req, res, next) => {
     return res.redirect("/dashboard/student");
   } catch (err) {
     next(err);
+  }
+};
+
+const verifyLogin2FA = async (req, res, next) => {
+  try {
+    const pendingUserId = Number(req.session?.pending2FAUserId || 0);
+    if (!pendingUserId) {
+      return res.redirect("/login");
+    }
+
+    const token = String(req.body?.token || "").trim();
+    if (!/^\d{6}$/.test(token)) {
+      return res.status(400).render("login2fa", {
+        error: "Please enter a valid 6-digit code.",
+        info: null,
+        email: req.session.pending2FAUserEmail || "",
+      });
+    }
+
+    const user = await getUserWithTwoFactorById(pendingUserId);
+    if (!user || !user.twofactor_secret || Number(user.is_2fa_enabled || 0) !== 1) {
+      req.session.pending2FAUserId = null;
+      req.session.pending2FAUserEmail = null;
+      await new Promise((resolve) => req.session.save(() => resolve()));
+      return res.redirect("/login?twofa_error=not_enabled");
+    }
+
+    const isValid = speakeasy.totp.verify({
+      secret: user.twofactor_secret,
+      encoding: "base32",
+      token,
+      window: 1,
+    });
+    if (!isValid) {
+      return res.status(401).render("login2fa", {
+        error: "Invalid 2FA code.",
+        info: null,
+        email: req.session.pending2FAUserEmail || "",
+      });
+    }
+
+    req.session.user = { id: user.id, role: user.role, name: user.name, is_2fa_enabled: 1 };
+    req.session.pending2FAUserId = null;
+    req.session.pending2FAUserEmail = null;
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    await logUserActivity({
+      userId: user.id,
+      actorUserId: user.id,
+      activityType: "login",
+      ipAddress: req.ip,
+      details: { via2FA: true },
+    });
+
+    const role = String(user.role || "").toLowerCase();
+    if (role === "admin") return res.redirect("/dashboard/admin");
+    if (role === "lecturer") return res.redirect("/dashboard/lecturer");
+    return res.redirect("/dashboard/student");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const show2FASetup = async (req, res, next) => {
+  try {
+    if (!req.user?.id) return res.redirect("/login");
+    const currentUser = await getUserWithTwoFactorById(req.user.id);
+    if (!currentUser) return res.redirect("/login");
+
+    const secret = speakeasy.generateSecret({
+      length: 20,
+      name: `EduSphere (${currentUser.email})`,
+    });
+    req.session.temp2FASecret = secret.base32;
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
+    return res.render("twoFactorSetup", {
+      error: null,
+      info: req.query,
+      qrCodeDataURL,
+      manualKey: secret.base32,
+      isEnabled: Number(currentUser.is_2fa_enabled || 0) === 1,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const verify2FASetup = async (req, res, next) => {
+  try {
+    if (!req.user?.id) return res.redirect("/login");
+    const token = String(req.body?.token || "").trim();
+    const tempSecret = req.session?.temp2FASecret || null;
+    if (!tempSecret) return res.redirect("/2fa/setup?error=missing_secret");
+    if (!/^\d{6}$/.test(token)) return res.redirect("/2fa/setup?error=invalid_code");
+
+    const verified = speakeasy.totp.verify({
+      secret: tempSecret,
+      encoding: "base32",
+      token,
+      window: 1,
+    });
+    if (!verified) return res.redirect("/2fa/setup?error=invalid_code");
+
+    await enableTwoFactor(req.user.id, tempSecret);
+    req.session.temp2FASecret = null;
+    if (req.session.user) req.session.user.is_2fa_enabled = 1;
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+
+    const user = await getUserWithTwoFactorById(req.user.id);
+    if (user?.email) {
+      await sendMail({
+        to: user.email,
+        subject: "EduSphere 2FA enabled",
+        html: `<p>Hi ${user.name || "Learner"}, your two-factor authentication has been enabled.</p>`,
+      }).catch(() => null);
+    }
+    return res.redirect("/2fa/setup?enabled=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const disable2FAForCurrentUser = async (req, res, next) => {
+  try {
+    if (!req.user?.id) return res.redirect("/login");
+    await disableTwoFactor(req.user.id);
+    if (req.session.user) req.session.user.is_2fa_enabled = 0;
+    req.session.temp2FASecret = null;
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
+    return res.redirect("/2fa/setup?disabled=1");
+  } catch (err) {
+    return next(err);
   }
 };
 
@@ -201,6 +370,11 @@ const googleRedirect = (req, res) => {
 module.exports = {
   showLogin,
   showSignup,
+  showLogin2FA,
+  verifyLogin2FA,
+  show2FASetup,
+  verify2FASetup,
+  disable2FAForCurrentUser,
   showForgotPassword,
   showResetPassword,
   login,

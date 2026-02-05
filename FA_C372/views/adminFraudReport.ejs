@@ -138,6 +138,9 @@
               <tbody>
                 <% report.forEach(function(row) { %>
                   <% const details = row.details || {}; %>
+                  <% const rawFlags = Array.isArray(details.flags) ? details.flags : []; %>
+                  <% const flaggedAmount = Number(details.amount || 0); %>
+                  <% const displayFlags = rawFlags.map(function (flag) { return flag === "high_amount" && flaggedAmount > 0 ? `${flag} ($${flaggedAmount.toFixed(2)})` : flag; }).join(", "); %>
                   <tr>
                     <td>#<%= row.id %></td>
                     <td><%= row.created_at ? new Date(row.created_at).toLocaleString() : "" %></td>
@@ -148,7 +151,7 @@
                     <td><%= row.rule_code %></td>
                     <td class="text-capitalize"><%= row.severity %></td>
                     <td><%= Number(details.riskScore || 0) %></td>
-                    <td class="text-muted small"><%= Array.isArray(details.flags) ? details.flags.join(", ") : "-" %></td>
+                    <td class="text-muted small"><%= displayFlags || "-" %></td>
                   </tr>
                 <% }); %>
               </tbody>

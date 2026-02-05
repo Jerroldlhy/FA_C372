@@ -37,6 +37,7 @@
                   <tr>
                     <th>Order #</th>
                     <th>Total</th>
+                    <th>Refunded</th>
                     <th>Payment</th>
                     <th>Status</th>
                     <th>Date</th>
@@ -48,6 +49,7 @@
                     <tr>
                       <td><%= order.id %></td>
                       <td>$<%= Number(order.total_amount || 0).toFixed(2) %></td>
+                      <td>$<%= Number(order.refunded_amount || 0).toFixed(2) %></td>
                       <td class="text-capitalize">
                         <span class="status-badge <%= order.payment_status === 'paid' ? 'status-badge-success' : 'status-badge-warning' %>">
                           <%= order.payment_status %>

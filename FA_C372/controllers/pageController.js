@@ -4,9 +4,16 @@ const { getReviewsForCourses } = require("../models/reviewModel");
 const {
   getSubscriptionByUser,
   upsertSubscription,
+  updateSubscriptionByStripeId,
   cancelSubscriptionByUser,
 } = require("../models/subscriptionModel");
 const { logUserActivity } = require("../models/userActivityModel");
+const {
+  createSubscriptionCheckoutSession,
+  retrieveCheckoutSession,
+  cancelSubscription,
+  constructWebhookEvent,
+} = require("../services/stripe");
 
 const home = async (req, res, next) => {
   try {
@@ -32,7 +39,7 @@ const PLAN_CATALOG = {
     price: 29,
     description: "Unlimited learning, projects, and certificates.",
     perks: ["Unlimited course access", "Downloadable resources", "Project reviews", "Priority support", "Official certificates"],
-    cta: "Start Free Trial",
+    cta: "Subscribe with Stripe",
   },
   enterprise: {
     code: "enterprise",
@@ -76,6 +83,23 @@ const subscribePlan = async (req, res, next) => {
     if (!plan) return res.redirect("/plans?subscription_error=invalid_plan");
     if (!req.user?.id) return res.redirect("/login");
 
+    if (plan.code === "pro") {
+      const priceId = String(process.env.STRIPE_PRO_PRICE_ID || "").trim();
+      if (!priceId) {
+        return res.redirect("/plans?subscription_error=stripe_price_missing");
+      }
+      const host = `${req.protocol}://${req.get("host")}`;
+      const session = await createSubscriptionCheckoutSession({
+        priceId,
+        successUrl: `${host}/plans/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${host}/plans?subscription_error=stripe_cancelled`,
+        customerEmail: req.user.email || undefined,
+        clientReferenceId: String(req.user.id),
+        metadata: { userId: String(req.user.id), planCode: plan.code },
+      });
+      return res.redirect(session.url);
+    }
+
     const status = plan.code === "enterprise" ? "pending_contact" : "active";
     const monthlyPrice = typeof plan.price === "number" ? plan.price : 0;
 
@@ -97,7 +121,56 @@ const subscribePlan = async (req, res, next) => {
 
     return res.redirect(`/plans?subscription_success=1&plan=${encodeURIComponent(plan.code)}`);
   } catch (err) {
+    if (String(req.body?.plan_code || "").toLowerCase() === "pro") {
+      return res.redirect("/plans?subscription_error=stripe_checkout_failed");
+    }
     next(err);
+  }
+};
+
+const stripeSubscribeSuccess = async (req, res, next) => {
+  try {
+    const sessionId = String(req.query.session_id || "").trim();
+    if (!sessionId) return res.redirect("/plans?subscription_error=stripe_session_missing");
+
+    const session = await retrieveCheckoutSession(sessionId, { expand: ["subscription"] });
+    const complete =
+      String(session.status || "").toLowerCase() === "complete" &&
+      String(session.mode || "").toLowerCase() === "subscription";
+    if (!complete || !session.subscription) {
+      return res.redirect("/plans?subscription_error=stripe_incomplete");
+    }
+
+    const userId = Number(session.client_reference_id || session.metadata?.userId || 0);
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.redirect("/plans?subscription_error=stripe_incomplete");
+    }
+
+    await upsertSubscription({
+      userId,
+      planCode: PLAN_CATALOG.pro.code,
+      planName: PLAN_CATALOG.pro.name,
+      monthlyPrice: Number(PLAN_CATALOG.pro.price) || 0,
+      status: "active",
+      stripeCustomerId: session.customer ? String(session.customer) : null,
+      stripeSubscriptionId:
+        typeof session.subscription === "string"
+          ? session.subscription
+          : String(session.subscription.id || ""),
+      startsAt: new Date(),
+    });
+
+    await logUserActivity({
+      userId,
+      actorUserId: req.user?.id || userId,
+      activityType: "plan_subscribed",
+      ipAddress: req.ip,
+      details: { planCode: "pro", status: "active", provider: "stripe" },
+    });
+
+    return res.redirect("/plans?subscription_success=1&plan=pro");
+  } catch (err) {
+    return next(err);
   }
 };
 
@@ -110,6 +183,10 @@ const cancelPlan = async (req, res, next) => {
     }
     if (String(currentSubscription.status || "").toLowerCase() === "cancelled") {
       return res.redirect("/plans?subscription_error=already_cancelled");
+    }
+
+    if (currentSubscription.plan_code === "pro" && currentSubscription.stripe_subscription_id) {
+      await cancelSubscription(currentSubscription.stripe_subscription_id);
     }
 
     const cancelled = await cancelSubscriptionByUser(req.user.id, new Date());
@@ -128,6 +205,52 @@ const cancelPlan = async (req, res, next) => {
     return res.redirect("/plans?subscription_cancelled=1");
   } catch (err) {
     return next(err);
+  }
+};
+
+const handleStripeWebhook = async (req, res) => {
+  try {
+    const signature = req.headers["stripe-signature"];
+    const event = constructWebhookEvent(req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      if (String(session.mode || "").toLowerCase() !== "subscription") {
+        return res.json({ received: true });
+      }
+      const userId = Number(session.client_reference_id || session.metadata?.userId || 0);
+      if (Number.isInteger(userId) && userId > 0 && session.subscription) {
+        await upsertSubscription({
+          userId,
+          planCode: PLAN_CATALOG.pro.code,
+          planName: PLAN_CATALOG.pro.name,
+          monthlyPrice: Number(PLAN_CATALOG.pro.price) || 0,
+          status: "active",
+          stripeCustomerId: session.customer ? String(session.customer) : null,
+          stripeSubscriptionId: String(session.subscription),
+          startsAt: new Date(),
+        });
+      }
+    }
+
+    if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+      const subscription = event.data.object;
+      const stripeStatus = String(subscription.status || "").toLowerCase();
+      const localStatus = stripeStatus === "active" ? "active" : "cancelled";
+      const endsAt = localStatus === "cancelled" ? new Date() : null;
+      await updateSubscriptionByStripeId({
+        stripeSubscriptionId: String(subscription.id),
+        planCode: PLAN_CATALOG.pro.code,
+        planName: PLAN_CATALOG.pro.name,
+        monthlyPrice: Number(PLAN_CATALOG.pro.price) || 0,
+        status: localStatus,
+        endsAt,
+      });
+    }
+
+    return res.json({ received: true });
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 };
 
@@ -173,6 +296,8 @@ module.exports = {
   home,
   plans,
   subscribePlan,
+  stripeSubscribeSuccess,
   cancelPlan,
+  handleStripeWebhook,
   mentors,
 };

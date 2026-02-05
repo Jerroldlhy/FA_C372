@@ -68,7 +68,22 @@ const sendPasswordResetEmail = async (email, token, name) => {
   }
 };
 
+const sendMail = async ({ to, subject, text, html, from, attachments }) => {
+  if (!transporter) {
+    throw new Error("SMTP transporter not configured.");
+  }
+  return transporter.sendMail({
+    from: from || smtpFrom,
+    to,
+    subject: subject || "EduSphere notification",
+    text,
+    html,
+    attachments: attachments || undefined,
+  });
+};
+
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendMail,
 };

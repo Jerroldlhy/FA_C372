@@ -281,6 +281,7 @@ CREATE TABLE `orders` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
+  `refunded_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
   `payment_status` enum('pending','paid','failed','refunded') DEFAULT 'pending',
   `order_status` enum('created','processing','completed','cancelled') DEFAULT 'created',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -380,7 +381,7 @@ CREATE TABLE `payments` (
   `id` int NOT NULL AUTO_INCREMENT,
   `order_id` int NOT NULL,
   `user_id` int NOT NULL,
-  `method` enum('wallet','paypal','apple_pay','google_pay','crypto','stripe') NOT NULL,
+  `method` enum('wallet','paypal','apple_pay','google_pay','crypto','stripe','nets') NOT NULL,
   `provider_txn_id` varchar(128) DEFAULT NULL,
   `amount` decimal(10,2) NOT NULL,
   `status` enum('pending','authorized','completed','failed','refunded') DEFAULT 'pending',
@@ -401,6 +402,84 @@ CREATE TABLE `payments` (
 LOCK TABLES `payments` WRITE;
 /*!40000 ALTER TABLE `payments` DISABLE KEYS */;
 /*!40000 ALTER TABLE `payments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `refund_requests`
+--
+
+DROP TABLE IF EXISTS `refund_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `refund_requests` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `order_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `payment_id` int DEFAULT NULL,
+  `requested_amount` decimal(10,2) NOT NULL,
+  `reason` text,
+  `status` enum('pending','approved','rejected','failed','completed') NOT NULL DEFAULT 'pending',
+  `admin_note` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_refund_request_order` (`order_id`),
+  KEY `idx_refund_request_user` (`user_id`),
+  KEY `idx_refund_request_status` (`status`),
+  KEY `fk_refund_request_payment` (`payment_id`),
+  CONSTRAINT `fk_refund_request_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_refund_request_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_refund_request_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `refund_requests`
+--
+
+LOCK TABLES `refund_requests` WRITE;
+/*!40000 ALTER TABLE `refund_requests` DISABLE KEYS */;
+/*!40000 ALTER TABLE `refund_requests` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `refund_transactions`
+--
+
+DROP TABLE IF EXISTS `refund_transactions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `refund_transactions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `refund_request_id` int NOT NULL,
+  `order_id` int NOT NULL,
+  `payment_id` int DEFAULT NULL,
+  `provider` varchar(40) NOT NULL,
+  `provider_refund_id` varchar(128) DEFAULT NULL,
+  `provider_txn_id` varchar(128) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(10) NOT NULL DEFAULT 'SGD',
+  `status` varchar(40) NOT NULL,
+  `raw_response` json DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_refund_txn_request` (`refund_request_id`),
+  KEY `idx_refund_txn_order` (`order_id`),
+  KEY `idx_refund_txn_provider_ref` (`provider_refund_id`),
+  KEY `fk_refund_txn_payment` (`payment_id`),
+  CONSTRAINT `fk_refund_txn_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_refund_txn_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_refund_txn_request` FOREIGN KEY (`refund_request_id`) REFERENCES `refund_requests` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `refund_transactions`
+--
+
+LOCK TABLES `refund_transactions` WRITE;
+/*!40000 ALTER TABLE `refund_transactions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `refund_transactions` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -445,12 +524,15 @@ CREATE TABLE `subscriptions` (
   `plan_name` varchar(60) NOT NULL,
   `monthly_price` decimal(10,2) NOT NULL DEFAULT '0.00',
   `status` enum('active','pending_contact','cancelled') NOT NULL DEFAULT 'active',
+  `stripe_customer_id` varchar(100) DEFAULT NULL,
+  `stripe_subscription_id` varchar(100) DEFAULT NULL,
   `starts_at` datetime NOT NULL,
   `ends_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_subscription_user` (`user_id`),
+  UNIQUE KEY `uniq_subscription_stripe_sub` (`stripe_subscription_id`),
   CONSTRAINT `fk_subscription_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -578,6 +660,8 @@ CREATE TABLE `users` (
   `password_reset_expires_at` datetime DEFAULT NULL,
   `account_status` enum('active','suspended') NOT NULL DEFAULT 'active',
   `suspended_at` datetime DEFAULT NULL,
+  `twofactor_secret` varchar(255) DEFAULT NULL,
+  `is_2fa_enabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   KEY `verification_token` (`verification_token`),
@@ -591,7 +675,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL),(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL),(3,'peter tan','peter@peter.com','$2b$10$JI7jiZkq35y0Bfihone15u7hOoXIZajtCBde2KbrKOJI4dzuvf2fe','lecturer',0,'a92069aefb014000bb11e86ea722b6206936cf7eb3ae3ebe','2026-02-04 03:22:27',NULL,NULL,'active',NULL),(4,'Test acc','rpwansuey@gmail.com','$2b$10$Azm9njWFxxOAeJ7e8uYFIelV8md5WccwgN0EPZi2z5FSFYFfLDplW','student',1,NULL,'2026-02-04 03:24:49',NULL,NULL,'active',NULL);
+INSERT INTO `users` VALUES (1,'Mary Jane','maryjane@gmail.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','student',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL,NULL,0),(2,'Admin1','admin1@admin.com','$2b$10$OXvESkeAFk2vS3PPMPZquOrbFAD3O.TMa/PFGXaV9Ah.kh110k4uS','admin',1,NULL,'2026-02-03 09:47:19',NULL,NULL,'active',NULL,NULL,0),(3,'peter tan','peter@peter.com','$2b$10$JI7jiZkq35y0Bfihone15u7hOoXIZajtCBde2KbrKOJI4dzuvf2fe','lecturer',0,'a92069aefb014000bb11e86ea722b6206936cf7eb3ae3ebe','2026-02-04 03:22:27',NULL,NULL,'active',NULL,NULL,0),(4,'Test acc','rpwansuey@gmail.com','$2b$10$Azm9njWFxxOAeJ7e8uYFIelV8md5WccwgN0EPZi2z5FSFYFfLDplW','student',1,NULL,'2026-02-04 03:24:49',NULL,NULL,'active',NULL,NULL,0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 

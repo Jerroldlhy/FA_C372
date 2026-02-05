@@ -32,6 +32,9 @@
         <% if (status?.progress_updated) { %>
           <div class="alert alert-success">Progress updated.</div>
         <% } %>
+        <% if (status?.cert_emailed) { %>
+          <div class="alert alert-success">Course completed! Your certificate has been emailed to your registered email.</div>
+        <% } %>
         <% if (status?.cert_error === "not_completed") { %>
           <div class="alert alert-info">Complete 100% of this course to unlock your certificate.</div>
         <% } %>

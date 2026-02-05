@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Refund Requests</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="course-page">
+    <%- include("partials/navbar") %>
+    <main class="section">
+      <div class="container">
+        <div class="course-hero mb-4">
+          <div>
+            <p class="eyebrow text-uppercase text-muted mb-2">Support</p>
+            <h1 class="display-6 fw-bold mb-1">Refund Requests</h1>
+          </div>
+        </div>
+        <% if (status?.refund_requested) { %>
+          <div class="alert alert-success">Refund request submitted.</div>
+        <% } %>
+        <div class="dashboard-panel">
+          <% if (!requests || !requests.length) { %>
+            <div class="empty-state">No refund requests yet.</div>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Request #</th>
+                    <th>Order #</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% requests.forEach(function(item) { %>
+                    <tr>
+                      <td><%= item.id %></td>
+                      <td><%= item.order_id %></td>
+                      <td>$<%= Number(item.requested_amount || 0).toFixed(2) %></td>
+                      <td class="text-capitalize"><%= item.payment_method || "-" %></td>
+                      <td class="text-capitalize"><%= item.status %></td>
+                      <td><%= item.created_at ? new Date(item.created_at).toLocaleString() : "" %></td>
+                      <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/refunds/<%= item.id %>">View</a></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

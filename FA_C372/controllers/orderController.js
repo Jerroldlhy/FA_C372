@@ -22,7 +22,9 @@ const checkout = async (req, res, next) => {
       }
     }
 
-    const result = await createOrderFromCart(req.user.id, paymentMethod);
+    const result = await createOrderFromCart(req.user.id, paymentMethod, {
+      providerTxnId: req.session?.payment?.captureId || null,
+    });
     if (req.session) {
       req.session.payment = null;
       req.session.netsTxnRetrievalRef = null;

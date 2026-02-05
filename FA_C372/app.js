@@ -7,16 +7,6 @@ dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
 const pool = require("./models/db");
 const MySQLSessionStore = require("./models/mysqlSessionStore");
 const { enforceSameOrigin } = require("./middleware/securityMiddleware");
-
-const app = express();
-
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-app.use(enforceSameOrigin);
-
 const authController = require("./controllers/authController");
 const courseController = require("./controllers/courseController");
 const cartController = require("./controllers/cartController");
@@ -27,13 +17,28 @@ const lecturerController = require("./controllers/lecturerController");
 const learningController = require("./controllers/learningController");
 const pageController = require("./controllers/pageController");
 const reportController = require("./controllers/reportController");
+const refundController = require("./controllers/refundController");
+const adminRefundController = require("./controllers/adminRefundController");
 const { ensureCompletionColumn } = require("./models/enrollmentModel");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
+const { ensureRefundColumns } = require("./models/orderModel");
+const { ensureTable: ensureRefundRequestTable } = require("./models/refundRequestModel");
+const { ensureTable: ensureRefundTransactionTable } = require("./models/refundTransactionModel");
 const { ensureTable: ensureUserActivityTable, logUserActivity } = require("./models/userActivityModel");
 const { ensureAnnouncementsTable, ensureRecipientCountColumn } = require("./models/announcementModel");
-const { ensureAccountStatusColumns, ensurePasswordResetColumns } = require("./models/userModel");
+const { ensureAccountStatusColumns, ensurePasswordResetColumns, ensureTwoFactorColumns } = require("./models/userModel");
 const validators = require("./middleware/validationMiddleware");
+
+const app = express();
+
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.static(path.join(__dirname, "public")));
+app.post("/webhook/stripe", express.raw({ type: "application/json" }), pageController.handleStripeWebhook);
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(enforceSameOrigin);
 
 const sessionTtlHours = Number(process.env.SESSION_TTL_HOURS || 2);
 const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || "dev_secret_change_me";
@@ -138,14 +143,24 @@ app.post(
 app.get("/mentors", pageController.mentors);
 app.get("/plans", pageController.plans);
 app.post("/plans/subscribe", authenticateToken, requireRole(["student"]), pageController.subscribePlan);
+app.get("/plans/stripe/success", pageController.stripeSubscribeSuccess);
 app.post("/plans/cancel", authenticateToken, requireRole(["student"]), pageController.cancelPlan);
+app.get("/refunds", authenticateToken, requireRole(["student"]), refundController.list);
+app.get("/refunds/request/:orderId", authenticateToken, requireRole(["student"]), refundController.showRequestForm);
+app.post("/refunds/request/:orderId", authenticateToken, requireRole(["student"]), refundController.submitRequest);
+app.get("/refunds/:id", authenticateToken, requireRole(["student"]), refundController.details);
 app.get("/login", authController.showLogin);
+app.get("/login/2fa", authController.showLogin2FA);
 app.get("/auth/google", authController.googleRedirect);
 app.get("/signup", authController.showSignup);
+app.get("/2fa/setup", authenticateToken, authController.show2FASetup);
 app.get("/forgot-password", authController.showForgotPassword);
 app.get("/reset-password", authController.showResetPassword);
 app.post("/login", validators.validateLogin, authController.login);
+app.post("/login/2fa", authController.verifyLogin2FA);
 app.post("/signup", validators.validateSignup, authController.signup);
+app.post("/2fa/verify-setup", authenticateToken, authController.verify2FASetup);
+app.post("/2fa/disable", authenticateToken, authController.disable2FAForCurrentUser);
 app.post("/resend-verification", authController.resendVerification);
 app.get("/verify-email", authController.verifyEmail);
 app.post("/forgot-password", validators.validateForgotPassword, authController.requestPasswordReset);
@@ -268,6 +283,10 @@ app.get(
   requireAdmin,
   reportController.exportAuditLogReport
 );
+app.get("/admin/refunds", authenticateToken, requireAdmin, adminRefundController.list);
+app.get("/admin/refunds/:id", authenticateToken, requireAdmin, adminRefundController.details);
+app.post("/admin/refunds/:id/approve", authenticateToken, requireAdmin, adminRefundController.approve);
+app.post("/admin/refunds/:id/reject", authenticateToken, requireAdmin, adminRefundController.reject);
 
 app.post("/wallet/topup", authenticateToken, requireRole(["student"]), validators.validateTopUp, dashboardController.topUpWallet);
 app.post("/wallet/payment/start", authenticateToken, requireRole(["student"]), validators.validateTopUp, paymentController.startWalletTopUpPayment);
@@ -380,6 +399,7 @@ const port = process.env.PORT || 3000;
 const startServer = async () => {
   await ensureAccountStatusColumns();
   await ensurePasswordResetColumns();
+  await ensureTwoFactorColumns();
   await ensureUserActivityTable();
   await ensureCompletionColumn();
   await ensureAnnouncementsTable();
@@ -387,6 +407,9 @@ const startServer = async () => {
   await sessionStore.ensureTable();
   await ensurePaymentTables();
   await ensureSubscriptionTable();
+  await ensureRefundColumns();
+  await ensureRefundRequestTable();
+  await ensureRefundTransactionTable();
   setInterval(() => {
     sessionStore.cleanupExpired().catch((err) => {
       console.error("Session cleanup failed:", err.message);

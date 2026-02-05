@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | 2FA Verification</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-wrapper">
+      <a class="back-link" href="/login">&larr; Back to Login</a>
+      <section class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark"></span>
+          <span>EduSphere</span>
+        </div>
+        <h1>Two-Factor Verification</h1>
+        <p class="auth-subtitle">
+          Enter the 6-digit code from your authenticator app
+          <% if (email) { %>for <strong><%= email %></strong><% } %>.
+        </p>
+
+        <% if (error) { %>
+          <div class="auth-alert auth-alert-danger"><%= error %></div>
+        <% } %>
+
+        <form method="POST" action="/login/2fa" class="auth-form">
+          <label>
+            Authentication Code
+            <input
+              type="text"
+              name="token"
+              maxlength="6"
+              pattern="\d{6}"
+              inputmode="numeric"
+              placeholder="123456"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn-primary auth-submit">Verify and Continue</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

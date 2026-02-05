@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduSphere | Security 2FA</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-wrapper">
+      <a class="back-link" href="/">&larr; Back</a>
+      <section class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark"></span>
+          <span>EduSphere</span>
+        </div>
+        <h1>Set Up 2FA</h1>
+        <p class="auth-subtitle">Scan this QR code with Google Authenticator (or any TOTP app), then verify using a 6-digit code.</p>
+
+        <% if (info?.enabled) { %>
+          <div class="auth-alert auth-alert-success">Two-factor authentication is enabled.</div>
+        <% } %>
+        <% if (info?.disabled) { %>
+          <div class="auth-alert auth-alert-info">Two-factor authentication is disabled.</div>
+        <% } %>
+        <% if (info?.error === "invalid_code") { %>
+          <div class="auth-alert auth-alert-danger">Invalid 2FA code. Please try again.</div>
+        <% } %>
+        <% if (info?.error === "missing_secret") { %>
+          <div class="auth-alert auth-alert-warning">Session expired. Please scan a new QR code.</div>
+        <% } %>
+
+        <% if (isEnabled) { %>
+          <div class="auth-alert auth-alert-info">2FA is currently enabled for your account.</div>
+          <form method="POST" action="/2fa/disable" class="auth-form" onsubmit="return confirm('Disable two-factor authentication for your account?');">
+            <button type="submit" class="btn btn-outline auth-submit">Disable 2FA</button>
+          </form>
+        <% } %>
+
+        <% if (qrCodeDataURL) { %>
+          <div style="text-align:center; margin: 1rem 0;">
+            <img src="<%= qrCodeDataURL %>" alt="2FA QR code" style="max-width: 220px; width: 100%;" />
+          </div>
+          <div class="auth-alert auth-alert-info">
+            Manual key: <code><%= manualKey %></code>
+          </div>
+        <% } %>
+
+        <form method="POST" action="/2fa/verify-setup" class="auth-form">
+          <label>
+            6-digit Code
+            <input
+              type="text"
+              name="token"
+              maxlength="6"
+              pattern="\d{6}"
+              inputmode="numeric"
+              placeholder="123456"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn-primary auth-submit">Enable 2FA</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

@@ -45,6 +45,18 @@
         <% if (status?.subscription_error === "cancel_failed") { %>
           <div class="alert alert-danger">Unable to cancel subscription right now. Please try again.</div>
         <% } %>
+        <% if (status?.subscription_error === "stripe_price_missing") { %>
+          <div class="alert alert-danger">Stripe Pro plan is not configured yet. Set <code>STRIPE_PRO_PRICE_ID</code> in <code>.env</code>.</div>
+        <% } %>
+        <% if (status?.subscription_error === "stripe_checkout_failed") { %>
+          <div class="alert alert-danger">Unable to start Stripe subscription checkout right now. Please try again.</div>
+        <% } %>
+        <% if (status?.subscription_error === "stripe_cancelled") { %>
+          <div class="alert alert-warning">Stripe checkout was cancelled.</div>
+        <% } %>
+        <% if (status?.subscription_error === "stripe_session_missing" || status?.subscription_error === "stripe_incomplete") { %>
+          <div class="alert alert-warning">Stripe checkout did not complete. Please try again.</div>
+        <% } %>
         <% if (currentSubscription) { %>
           <div class="alert alert-info">
             Current plan: <strong><%= currentSubscription.plan_name %></strong>

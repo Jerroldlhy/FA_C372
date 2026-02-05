@@ -81,6 +81,11 @@
             Password reset successful. You can now log in.
           </div>
         <% } %>
+        <% if (info?.twofa_error === "not_enabled") { %>
+          <div class="auth-alert auth-alert-warning">
+            Two-factor authentication is not enabled for this account.
+          </div>
+        <% } %>
 
         <form method="POST" action="/login" class="auth-form">
           <label>

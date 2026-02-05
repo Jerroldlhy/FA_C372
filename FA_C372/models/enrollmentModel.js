@@ -1,6 +1,9 @@
 const pool = require("./db");
+let completionColumnChecked = false;
+let completionColumnAvailable = false;
 
-const ensureCompletionColumn = async () => {
+const hasCompletionColumn = async () => {
+  if (completionColumnChecked) return completionColumnAvailable;
   const [rows] = await pool.query(
     `SELECT 1
      FROM INFORMATION_SCHEMA.COLUMNS
@@ -9,14 +12,25 @@ const ensureCompletionColumn = async () => {
        AND COLUMN_NAME = 'completed_at'
      LIMIT 1`
   );
-  if (!rows.length) {
+  completionColumnChecked = true;
+  completionColumnAvailable = rows.length > 0;
+  return completionColumnAvailable;
+};
+
+const ensureCompletionColumn = async () => {
+  if (!(await hasCompletionColumn())) {
     await pool.query("ALTER TABLE enrollments ADD COLUMN completed_at DATETIME NULL");
+    completionColumnChecked = true;
+    completionColumnAvailable = true;
   }
 };
 
 const getEnrollmentsByStudent = async (studentId) => {
+  const includeCompletedAt = await hasCompletionColumn();
   const [rows] = await pool.query(
-    `SELECT e.id, e.progress, e.completed_at, c.id AS course_id, c.course_name, c.category, c.price
+    `SELECT e.id, e.progress, ${
+      includeCompletedAt ? "e.completed_at" : "NULL AS completed_at"
+    }, c.id AS course_id, c.course_name, c.category, c.price
      FROM enrollments e
      INNER JOIN courses c ON e.course_id = c.id
      WHERE e.student_id = ?
@@ -42,8 +56,11 @@ const createEnrollment = async (courseId, studentId) => {
 };
 
 const getEnrollmentByStudentAndCourse = async (studentId, courseId) => {
+  const includeCompletedAt = await hasCompletionColumn();
   const [rows] = await pool.query(
-    `SELECT id, course_id, student_id, progress, created_at, completed_at
+    `SELECT id, course_id, student_id, progress, created_at, ${
+      includeCompletedAt ? "completed_at" : "NULL AS completed_at"
+    }
      FROM enrollments
      WHERE student_id = ? AND course_id = ?
      LIMIT 1`,
@@ -54,19 +71,29 @@ const getEnrollmentByStudentAndCourse = async (studentId, courseId) => {
 
 const updateEnrollmentProgress = async (studentId, courseId, progress) => {
   const safeProgress = Math.max(0, Math.min(Number(progress) || 0, 100));
+  if (await hasCompletionColumn()) {
+    await pool.query(
+      `UPDATE enrollments
+       SET progress = ?,
+           completed_at = CASE
+             WHEN ? >= 100 THEN COALESCE(completed_at, NOW())
+             ELSE completed_at
+           END
+       WHERE student_id = ? AND course_id = ?`,
+      [safeProgress, safeProgress, studentId, courseId]
+    );
+    return;
+  }
   await pool.query(
     `UPDATE enrollments
-     SET progress = ?,
-         completed_at = CASE
-           WHEN ? >= 100 THEN COALESCE(completed_at, NOW())
-           ELSE completed_at
-         END
+     SET progress = ?
      WHERE student_id = ? AND course_id = ?`,
-    [safeProgress, safeProgress, studentId, courseId]
+    [safeProgress, studentId, courseId]
   );
 };
 
 const getCompletedEnrollmentCertificateData = async (studentId, courseId) => {
+  const includeCompletedAt = await hasCompletionColumn();
   const [rows] = await pool.query(
     `SELECT
        e.id AS enrollment_id,
@@ -74,7 +101,7 @@ const getCompletedEnrollmentCertificateData = async (studentId, courseId) => {
        e.student_id,
        e.progress,
        e.created_at AS enrolled_at,
-       e.completed_at,
+       ${includeCompletedAt ? "e.completed_at" : "NULL AS completed_at"},
        c.course_name,
        c.category,
        c.created_at AS course_created_at,

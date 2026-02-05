@@ -25,11 +25,18 @@
       if (safeRole !== "admin" && safeRole !== "lecturer") {
         navItems.unshift({ label: "Courses", href: "/courses" });
       }
+      if (safeRole === "admin") {
+        navItems.push({ label: "Refunds", href: "/admin/refunds" });
+      }
       if (safeRole === "student") {
         navItems.push({ label: "My Learning", href: "/learning" });
         navItems.push({ label: "Wallet", href: "/wallet" });
         navItems.push({ label: "Cart", href: "/cart" });
         navItems.push({ label: "Purchase History", href: "/orders" });
+        navItems.push({ label: "Refunds", href: "/refunds" });
+      }
+      if (safeRole) {
+        navItems.push({ label: "Security / 2FA", href: "/2fa/setup" });
       }
     %>
     <div class="header-middle">

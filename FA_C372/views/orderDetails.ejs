@@ -19,6 +19,16 @@
         <% if (status?.ordered) { %>
           <div class="alert alert-success">Order placed successfully.</div>
         <% } %>
+        <% if (status?.refund_error === "not_refundable") { %>
+          <div class="alert alert-warning">This order is not eligible for refund.</div>
+        <% } %>
+        <% if (status?.refund_error === "pending_exists") { %>
+          <div class="alert alert-warning">A refund request is already pending for this order.</div>
+        <% } %>
+        <% if (status?.refund_error === "already_refunded") { %>
+          <div class="alert alert-warning">This order has already been refunded.</div>
+        <% } %>
+
         <div class="course-hero mb-4">
           <div>
             <p class="eyebrow text-uppercase text-muted mb-2">Invoice</p>
@@ -31,8 +41,11 @@
             <p class="text-muted small mb-1">Total</p>
             <strong class="display-6">$<%= Number(order.total_amount || 0).toFixed(2) %></strong>
             <p class="text-muted small mb-0 text-capitalize">
-              <%= order.payment_status %> Â· <%= order.order_status %>
+              <%= order.payment_status %> · <%= order.order_status %>
             </p>
+            <% if (Number(order.refunded_amount || 0) > 0) { %>
+              <p class="text-muted small mb-0">Refunded: $<%= Number(order.refunded_amount || 0).toFixed(2) %></p>
+            <% } %>
           </div>
         </div>
 
@@ -68,6 +81,9 @@
             <button class="btn btn-outline-dark btn-sm" type="button" onclick="window.print()">Print invoice</button>
             <a class="btn btn-outline-secondary btn-sm" href="/courses">Browse more courses</a>
             <a class="btn btn-primary btn-sm" href="/dashboard/student">Go to dashboard</a>
+            <% if (String(order.payment_status || "").toLowerCase() === "paid" && Number(order.refunded_amount || 0) === 0) { %>
+              <a class="btn btn-outline-danger btn-sm" href="/refunds/request/<%= order.id %>">Request full refund</a>
+            <% } %>
           </div>
         </div>
       </div>

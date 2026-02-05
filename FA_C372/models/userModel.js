@@ -57,10 +57,24 @@ const ensurePasswordResetColumns = async () => {
   }
 };
 
+const ensureTwoFactorColumns = async () => {
+  if (!(await columnExists("users", "twofactor_secret"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN twofactor_secret VARCHAR(255) NULL"
+    );
+  }
+  if (!(await columnExists("users", "is_2fa_enabled"))) {
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN is_2fa_enabled TINYINT(1) NOT NULL DEFAULT 0"
+    );
+  }
+};
+
 const getUserByEmail = async (email) => {
   const [rows] = await pool.query(
     `SELECT id, name, email, password_hash, role, email_verified,
-            COALESCE(account_status, 'active') AS account_status, suspended_at
+            COALESCE(account_status, 'active') AS account_status, suspended_at,
+            COALESCE(is_2fa_enabled, 0) AS is_2fa_enabled, twofactor_secret
      FROM users
      WHERE email = ?
      LIMIT 1`,
@@ -72,7 +86,22 @@ const getUserByEmail = async (email) => {
 const getUserById = async (userId) => {
   const [rows] = await pool.query(
     `SELECT id, name, email, role,
-            COALESCE(account_status, 'active') AS account_status, suspended_at
+            COALESCE(account_status, 'active') AS account_status, suspended_at,
+            COALESCE(is_2fa_enabled, 0) AS is_2fa_enabled
+     FROM users
+     WHERE id = ?
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] || null;
+};
+
+const getUserWithTwoFactorById = async (userId) => {
+  const [rows] = await pool.query(
+    `SELECT id, name, email, role,
+            COALESCE(account_status, 'active') AS account_status, suspended_at,
+            COALESCE(is_2fa_enabled, 0) AS is_2fa_enabled,
+            twofactor_secret
      FROM users
      WHERE id = ?
      LIMIT 1`,
@@ -181,10 +210,26 @@ const updateUserAccountStatus = async (userId, status) => {
   );
 };
 
+const enableTwoFactor = async (userId, secret) => {
+  await pool.query(
+    "UPDATE users SET twofactor_secret = ?, is_2fa_enabled = 1 WHERE id = ?",
+    [secret, userId]
+  );
+};
+
+const disableTwoFactor = async (userId) => {
+  await pool.query(
+    "UPDATE users SET twofactor_secret = NULL, is_2fa_enabled = 0 WHERE id = ?",
+    [userId]
+  );
+};
+
 module.exports = {
   ensureAccountStatusColumns,
   ensurePasswordResetColumns,
+  ensureTwoFactorColumns,
   getUserById,
+  getUserWithTwoFactorById,
   getUserByEmail,
   createUser,
   updateVerificationToken,
@@ -198,4 +243,6 @@ module.exports = {
   isLecturerId,
   updateUserRole,
   updateUserAccountStatus,
+  enableTwoFactor,
+  disableTwoFactor,
 };
