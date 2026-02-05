@@ -10,6 +10,7 @@ const { getLecturers, isLecturerId } = require("../models/userModel");
 const { getReviewsForCourses, upsertReview } = require("../models/reviewModel");
 const { getEnrollmentsByStudent, isStudentEnrolled } = require("../models/enrollmentModel");
 const { getWalletBalance } = require("../models/walletModel");
+const { getSubscriptionByUser } = require("../models/subscriptionModel");
 const {
   enrollStudentWithPayment,
   WalletError,
@@ -33,6 +34,11 @@ const normalizeActiveFlag = (value, fallback = 1) => {
 };
 
 const isPublishedCourse = (course) => course && course.is_active !== 0;
+const isProCourse = (course) => String(course?.subscription_model || "free").toLowerCase() === "pro";
+const hasProAccess = (subscription) =>
+  Boolean(subscription) &&
+  String(subscription.plan_code || "").toLowerCase() === "pro" &&
+  String(subscription.status || "").toLowerCase() === "active";
 
 const listCourses = async (req, res, next) => {
   try {
@@ -66,12 +72,15 @@ const listCourses = async (req, res, next) => {
     let enrolledCourseIds = [];
     let walletBalance = 0;
     let cartCourseIds = [];
+    let isProSubscriber = false;
     if (req.user && req.user.role === "student") {
       const enrollments = await getEnrollmentsByStudent(req.user.id);
       enrolledCourseIds = enrollments.map((row) => row.course_id);
       walletBalance = await getWalletBalance(req.user.id);
       const cartItems = await getCartItemsForUser(req.user.id);
       cartCourseIds = cartItems.map((row) => Number(row.course_id));
+      const subscription = await getSubscriptionByUser(req.user.id);
+      isProSubscriber = hasProAccess(subscription);
     }
     res.render("courses", {
       courses,
@@ -82,6 +91,7 @@ const listCourses = async (req, res, next) => {
       lecturers,
       filters,
       filterOptions,
+      isProSubscriber,
       status: req.query,
     });
   } catch (err) {
@@ -106,11 +116,17 @@ const getCourseDetails = async (req, res, next) => {
 
     let enrolled = false;
     let inCart = false;
+    let subscription = null;
+    let canAccess = true;
     const isStudent = viewerRole === "student";
     if (isStudent) {
       enrolled = await isStudentEnrolled(course.id, req.user.id);
       const cartItems = await getCartItemsForUser(req.user.id);
       inCart = cartItems.some((item) => Number(item.course_id) === Number(course.id));
+      subscription = await getSubscriptionByUser(req.user.id);
+      if (isProCourse(course) && !hasProAccess(subscription)) {
+        canAccess = false;
+      }
     }
 
     res.render("courseDetails", {
@@ -119,6 +135,9 @@ const getCourseDetails = async (req, res, next) => {
       isStudent,
       enrolled,
       inCart,
+      isProSubscriber: hasProAccess(subscription),
+      requiresPro: isProCourse(course),
+      canAccess,
     });
   } catch (err) {
     next(err);
@@ -127,7 +146,7 @@ const getCourseDetails = async (req, res, next) => {
 
 const handleCreateCourse = async (req, res, next) => {
   try {
-    const { course_name, price, category, description, level, language, instructor_id } = req.body;
+    const { course_name, price, category, description, level, language, instructor_id, subscription_model } = req.body;
     if (!course_name || !price) return res.redirect("/courses?course_error=missing");
     const role = (req.user.role || "").toLowerCase();
     let assignedInstructor = null;
@@ -142,6 +161,7 @@ const handleCreateCourse = async (req, res, next) => {
       language,
       stock_qty: 0,
       instructor_id: assignedInstructor,
+      subscription_model,
     });
     const redirectBase = req.body.redirect_to === "lecturer_dashboard" ? "/dashboard/lecturer" : "/courses";
     res.redirect(`${redirectBase}?course_created=1`);
@@ -152,7 +172,7 @@ const handleCreateCourse = async (req, res, next) => {
 
 const handleUpdateCourse = async (req, res, next) => {
   try {
-    const { course_name, price, category, description, level, language } = req.body;
+    const { course_name, price, category, description, level, language, subscription_model } = req.body;
     const course = await getCourseById(req.params.id);
     if (!course) return res.redirect("/courses?course_error=not_found");
     const role = (req.user.role || "").toLowerCase();
@@ -173,6 +193,7 @@ const handleUpdateCourse = async (req, res, next) => {
       stock_qty: 0,
       instructor_id: assignedInstructor,
       is_active: normalizedIsActive,
+      subscription_model,
     });
     const redirectBase = req.body.redirect_to === "lecturer_dashboard" ? "/dashboard/lecturer" : "/courses";
     res.redirect(`${redirectBase}?course_updated=1`);
@@ -221,6 +242,12 @@ const handleEnroll = async (req, res, next) => {
     if (!course) return res.redirect("/courses?enroll_error=course_missing");
     if (!isPublishedCourse(course)) {
       return res.redirect("/courses?enroll_error=course_unpublished");
+    }
+    if (isProCourse(course)) {
+      const subscription = await getSubscriptionByUser(req.user.id);
+      if (!hasProAccess(subscription)) {
+        return res.redirect("/courses?enroll_error=pro_required");
+      }
     }
     const price = Number(course.price);
     if (price < 0) return res.redirect("/courses?enroll_error=invalid_price");

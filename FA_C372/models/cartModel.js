@@ -38,7 +38,7 @@ const removeItemFromCart = async (userId, courseId) => {
 const getCartItemsForUser = async (userId) => {
   const [rows] = await pool.query(
     `SELECT ci.id, ci.course_id, 1 AS quantity,
-            c.course_name, c.price, c.category, c.level, c.language,
+            c.course_name, c.price, c.category, c.level, c.language, c.subscription_model,
             u.name AS instructor_name
      FROM carts ca
      JOIN cart_items ci ON ca.id = ci.cart_id

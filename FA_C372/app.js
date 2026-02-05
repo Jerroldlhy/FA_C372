@@ -20,6 +20,7 @@ const reportController = require("./controllers/reportController");
 const refundController = require("./controllers/refundController");
 const adminRefundController = require("./controllers/adminRefundController");
 const { ensureCompletionColumn } = require("./models/enrollmentModel");
+const { ensureSubscriptionModelColumn } = require("./models/courseModel");
 const { ensureTables: ensurePaymentTables } = require("./models/paymentAttemptModel");
 const { ensureTable: ensureSubscriptionTable } = require("./models/subscriptionModel");
 const { ensureRefundColumns } = require("./models/orderModel");
@@ -151,7 +152,6 @@ app.post("/refunds/request/:orderId", authenticateToken, requireRole(["student"]
 app.get("/refunds/:id", authenticateToken, requireRole(["student"]), refundController.details);
 app.get("/login", authController.showLogin);
 app.get("/login/2fa", authController.showLogin2FA);
-app.get("/auth/google", authController.googleRedirect);
 app.get("/signup", authController.showSignup);
 app.get("/2fa/setup", authenticateToken, authController.show2FASetup);
 app.get("/forgot-password", authController.showForgotPassword);
@@ -181,6 +181,12 @@ app.post(
   validators.validateCourseIdParam,
   validators.validateAnnouncement,
   lecturerController.sendCourseAnnouncement
+);
+app.post(
+  "/dashboard/lecturer/reviews/:reviewId/delete",
+  authenticateToken,
+  requireRole(["lecturer"]),
+  lecturerController.deleteReview
 );
 app.get(
   "/dashboard/lecturer/courses/:id/roster/export",
@@ -404,6 +410,7 @@ const startServer = async () => {
   await ensureCompletionColumn();
   await ensureAnnouncementsTable();
   await ensureRecipientCountColumn();
+  await ensureSubscriptionModelColumn();
   await sessionStore.ensureTable();
   await ensurePaymentTables();
   await ensureSubscriptionTable();

@@ -54,39 +54,6 @@
 
         <section class="wallet-grid">
           <div class="wallet-card stack-card">
-            <h5 class="mb-3 wallet-card-heading">Instant wallet credit</h5>
-            <p class="text-muted small wallet-card-intro">
-              Add balance instantly to your wallet and use it immediately for checkout.
-            </p>
-            <form method="POST" action="/wallet/topup" class="wallet-topup-form" id="walletTopupForm">
-              <input type="hidden" name="payment_method" value="wallet" />
-              <div class="form-floating mb-3">
-                <input
-                  class="form-control"
-                  id="amount-wallet"
-                  name="amount"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  placeholder="Amount"
-                  required
-                />
-                <label for="amount-wallet">Amount</label>
-              </div>
-              <div class="mb-3">
-                <label class="form-label small" for="currency_wallet">Currency</label>
-                <select class="form-select" id="currency_wallet" name="currency">
-                  <% (supportedCurrencies || []).forEach(function(code) { %>
-                    <option value="<%= code %>" <%= code === selectedCurrency ? "selected" : "" %>><%= code %></option>
-                  <% }); %>
-                </select>
-              </div>
-              <button class="btn btn-gradient w-100 fs-6" type="submit">Top up instantly</button>
-            </form>
-            <p class="text-muted small mt-3 mb-0">For external methods, use the gateway buttons below.</p>
-          </div>
-
-          <div class="wallet-card stack-card">
             <h5 class="mb-3 wallet-card-heading">External payment gateways</h5>
             <p class="text-muted small wallet-card-intro">
               Use a dedicated payment page (PayPal/Stripe/NETS) and credit wallet only after payment success.

@@ -2,6 +2,7 @@ const { getCourseById } = require("../models/courseModel");
 const { createAnnouncement } = require("../models/announcementModel");
 const { getStudentsForCourse } = require("../models/enrollmentModel");
 const { logUserActivity } = require("../models/userActivityModel");
+const { deleteReviewByInstructor } = require("../models/reviewModel");
 
 const sendCourseAnnouncement = async (req, res, next) => {
   try {
@@ -83,7 +84,24 @@ const exportCourseRoster = async (req, res, next) => {
   }
 };
 
+const deleteReview = async (req, res, next) => {
+  try {
+    const reviewId = Number(req.params.reviewId || 0);
+    if (!reviewId) {
+      return res.redirect("/dashboard/lecturer?review_deleted=invalid");
+    }
+    const affected = await deleteReviewByInstructor(reviewId, req.user.id);
+    if (!affected) {
+      return res.redirect("/dashboard/lecturer?review_deleted=not_found");
+    }
+    return res.redirect("/dashboard/lecturer?review_deleted=1");
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   sendCourseAnnouncement,
   exportCourseRoster,
+  deleteReview,
 };

@@ -338,6 +338,13 @@
                   required
                 />
               </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="subscription_model">Subscription Access</label>
+                <select class="form-select" id="subscription_model" name="subscription_model">
+                  <option value="free">Free (all students)</option>
+                  <option value="pro">Pro subscribers only</option>
+                </select>
+              </div>
               <div class="col-12">
                 <label class="form-label" for="description">Description</label>
                 <textarea
@@ -418,6 +425,13 @@
                       name="category"
                       value="<%= course.category || '' %>"
                     />
+                  </label>
+                  <label>
+                    Access
+                    <select class="form-select form-select-sm" name="subscription_model">
+                      <option value="free" <%= String(course.subscription_model || "free") === "free" ? "selected" : "" %>>Free</option>
+                      <option value="pro" <%= String(course.subscription_model || "free") === "pro" ? "selected" : "" %>>Pro</option>
+                    </select>
                   </label>
                   <label>
                     Price

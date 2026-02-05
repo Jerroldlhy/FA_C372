@@ -71,11 +71,6 @@
             Email already verified—just log in.
           </div>
         <% } %>
-        <% if (info?.social_unavailable) { %>
-          <div class="auth-alert auth-alert-info">
-            Social login is not wired up yet. Use your email/password instead.
-          </div>
-        <% } %>
         <% if (info?.password_reset) { %>
           <div class="auth-alert auth-alert-success">
             Password reset successful. You can now log in.
@@ -125,13 +120,6 @@
             Log In
           </button>
         </form>
-
-        <div class="auth-divider">
-          <span>Or sign in with</span>
-        </div>
-        <a class="btn btn-outline auth-social" href="/auth/google">
-          <span class="google-icon">G</span> Google
-        </a>
 
         <p class="text-muted small text-center mt-3">
           Didn’t see the verification email?

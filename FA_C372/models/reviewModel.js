@@ -22,7 +22,18 @@ const upsertReview = async (courseId, studentId, rating, reviewText) => {
   );
 };
 
+const deleteReviewByInstructor = async (reviewId, instructorId) => {
+  const [result] = await pool.query(
+    `DELETE r FROM course_reviews r
+     JOIN courses c ON r.course_id = c.id
+     WHERE r.id = ? AND c.instructor_id = ?`,
+    [reviewId, instructorId]
+  );
+  return result.affectedRows || 0;
+};
+
 module.exports = {
   getReviewsForCourses,
   upsertReview,
+  deleteReviewByInstructor,
 };

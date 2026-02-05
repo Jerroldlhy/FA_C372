@@ -1130,49 +1130,6 @@ img {
   padding: 12px 20px;
 }
 
-.auth-divider {
-  position: relative;
-  text-align: center;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.auth-divider::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 100%;
-  height: 1px;
-  background: #eceef6;
-  z-index: 0;
-}
-
-.auth-divider span {
-  position: relative;
-  z-index: 1;
-  background: #ffffff;
-  padding: 0 12px;
-}
-
-.auth-social {
-  width: 100%;
-  gap: 10px;
-  border-radius: 14px;
-  font-weight: 700;
-}
-
-.google-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #f4f5fb;
-  display: grid;
-  place-items: center;
-  font-family: "Space Grotesk", sans-serif;
-  font-weight: 700;
-}
-
 .auth-footer {
   text-align: center;
   color: var(--muted);

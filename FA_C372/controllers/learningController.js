@@ -12,7 +12,9 @@ const {
   getCompletedEnrollmentCertificateData,
 } = require("../models/enrollmentModel");
 const { getCourseById } = require("../models/courseModel");
+const { getSubscriptionByUser } = require("../models/subscriptionModel");
 const { logUserActivity } = require("../models/userActivityModel");
+const { getLatestOrderForUserCourse } = require("../models/orderModel");
 const { sendMail } = require("../services/emailService");
 
 const TOTAL_LESSONS = 5;
@@ -135,21 +137,37 @@ const courseLearning = async (req, res, next) => {
     const courseId = Number(req.params.courseId);
     if (!courseId) return res.redirect("/learning?error=invalid_course");
 
-    const [course, enrollment] = await Promise.all([
+    const [course, enrollment, order] = await Promise.all([
       getCourseById(courseId),
       getEnrollmentByStudentAndCourse(req.user.id, courseId),
+      getLatestOrderForUserCourse(req.user.id, courseId),
     ]);
 
     if (!course) return res.status(404).render("404");
+    if (String(course.subscription_model || "free").toLowerCase() === "pro") {
+      const subscription = await getSubscriptionByUser(req.user.id);
+      const hasAccess =
+        subscription &&
+        String(subscription.plan_code || "").toLowerCase() === "pro" &&
+        String(subscription.status || "").toLowerCase() === "active";
+      if (!hasAccess) {
+        return res.redirect("/plans?subscription_error=pro_required");
+      }
+    }
     if (!enrollment) return res.redirect(`/courses/${courseId}?content_error=not_enrolled`);
 
     const progress = Math.max(0, Math.min(Number(enrollment.progress || 0), 100));
     const lessons = buildLessonItems(progress);
+    const paidOrder = order && String(order.payment_status || "").toLowerCase() === "paid" ? order : null;
+    const refundOrderId = paidOrder && Number(paidOrder.refunded_amount || 0) === 0 ? paidOrder.order_id : null;
+    const refundEligible = progress === 0 && Boolean(refundOrderId);
     return res.render("courseLearning", {
       course,
       enrollment,
       progress,
       lessons,
+      refundOrderId,
+      refundEligible,
       status: req.query,
     });
   } catch (err) {

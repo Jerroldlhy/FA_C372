@@ -67,6 +67,15 @@
             <strong>Heads up:</strong> Please give your announcement a title before sending.
           </div>
         <% } %>
+        <% if (alertStatus.review_deleted === "1") { %>
+          <div class="alert alert-success mb-3">Review removed.</div>
+        <% } %>
+        <% if (alertStatus.review_deleted === "not_found") { %>
+          <div class="alert alert-warning mb-3">Review not found or already removed.</div>
+        <% } %>
+        <% if (alertStatus.review_deleted === "invalid") { %>
+          <div class="alert alert-danger mb-3">Invalid review delete request.</div>
+        <% } %>
 
         <section class="dashboard-panel card shadow-sm mb-4">
           <div class="card-body py-2">
@@ -227,6 +236,15 @@
                             </div>
                           </div>
                           <div class="row g-2 mt-2">
+                            <div class="col-sm-4">
+                              <label class="form-label small">Access</label>
+                              <select class="form-select form-select-sm" name="subscription_model">
+                                <option value="free" <%= String(course.subscription_model || "free") === "free" ? "selected" : "" %>>Free</option>
+                                <option value="pro" <%= String(course.subscription_model || "free") === "pro" ? "selected" : "" %>>Pro</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="row g-2 mt-2">
                             <div class="col-12">
                               <label class="form-label small">Description</label>
                               <textarea
@@ -299,7 +317,12 @@
                                   <li class="list-group-item px-0 py-2">
                                     <div class="d-flex justify-content-between align-items-center">
                                       <strong><%= review.student_name || "Student" %></strong>
-                                      <span class="text-muted small"><%= review.created_at ? new Date(review.created_at).toLocaleDateString() : "" %></span>
+                                      <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small"><%= review.created_at ? new Date(review.created_at).toLocaleDateString() : "" %></span>
+                                        <form method="POST" action="/dashboard/lecturer/reviews/<%= review.id %>/delete" class="d-inline" onsubmit="return confirm('Delete this review?');">
+                                          <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                        </form>
+                                      </div>
                                     </div>
                                     <p class="text-muted small mb-1">Rating: <%= Number(review.rating || 0).toFixed(1) %>/5</p>
                                     <p class="mb-0"><%= review.review || "No written feedback." %></p>
@@ -379,6 +402,13 @@
                       <label class="form-label small" for="level">Level</label>
                       <input class="form-control form-control-sm" id="level" name="level" />
                     </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small" for="subscription_model">Subscription Access</label>
+                    <select class="form-select form-select-sm" id="subscription_model" name="subscription_model">
+                      <option value="free">Free (all students)</option>
+                      <option value="pro">Pro subscribers only</option>
+                    </select>
                   </div>
                   <div class="mb-3">
                     <label class="form-label small" for="language">Language</label>

@@ -15,6 +15,28 @@ const parseBooleanFlag = (value, fallback = 1) => {
   return fallback;
 };
 
+const ensureSubscriptionModelColumn = async () => {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'courses'
+       AND COLUMN_NAME = 'subscription_model'
+     LIMIT 1`
+  );
+  if (rows.length) return;
+  await pool.query(
+    "ALTER TABLE courses ADD COLUMN subscription_model ENUM('free','pro') NOT NULL DEFAULT 'free' AFTER is_active"
+  );
+};
+
+const normalizeSubscriptionModel = (value, fallback = "free") => {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "pro") return "pro";
+  if (normalized === "free") return "free";
+  return fallback;
+};
+
 const getCoursesWithStats = async (filters = {}) => {
   const where = [];
   const params = [];
@@ -111,7 +133,7 @@ const getCourseFilterOptions = async (options = {}) => {
 const getCourseById = async (id) => {
   const [rows] = await pool.query(
     `SELECT c.id, c.course_name, c.description, c.price, c.category, c.level,
-            c.language, c.stock_qty, c.is_active,
+            c.language, c.stock_qty, c.is_active, c.subscription_model,
             c.instructor_id, u.name AS instructor_name
      FROM courses c
      LEFT JOIN users u ON c.instructor_id = u.id
@@ -131,11 +153,12 @@ const createCourse = async (course) => {
     language,
     stock_qty,
     instructor_id,
+    subscription_model,
   } = course;
   await pool.query(
     `INSERT INTO courses
-      (course_name, description, price, category, level, language, stock_qty, instructor_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      (course_name, description, price, category, level, language, stock_qty, instructor_id, subscription_model)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       course_name,
       description || null,
@@ -145,6 +168,7 @@ const createCourse = async (course) => {
       language || null,
       Number.isFinite(Number(stock_qty)) ? Number(stock_qty) : 0,
       instructor_id || null,
+      normalizeSubscriptionModel(subscription_model),
     ]
   );
 };
@@ -160,12 +184,13 @@ const updateCourse = async (id, course) => {
     stock_qty,
     instructor_id,
     is_active,
+    subscription_model,
   } = course;
   const normalizedIsActive = parseBooleanFlag(is_active, 1);
   await pool.query(
     `UPDATE courses
      SET course_name = ?, price = ?, category = ?, description = ?,
-         level = ?, language = ?, stock_qty = ?, instructor_id = ?, is_active = ?
+         level = ?, language = ?, stock_qty = ?, instructor_id = ?, is_active = ?, subscription_model = ?
      WHERE id = ?`,
     [
       course_name,
@@ -177,6 +202,7 @@ const updateCourse = async (id, course) => {
       Number.isFinite(Number(stock_qty)) ? Number(stock_qty) : 0,
       instructor_id || null,
       normalizedIsActive,
+      normalizeSubscriptionModel(subscription_model),
       id,
     ]
   );
@@ -188,7 +214,7 @@ const deleteCourse = async (id) => {
 
 const getCoursesByInstructor = async (lecturerId) => {
   const [rows] = await pool.query(
-    `SELECT id, course_name, category, price, level, language, is_active
+    `SELECT id, course_name, category, price, level, language, is_active, subscription_model
      FROM courses
      WHERE instructor_id = ?
      ORDER BY course_name`,
@@ -232,6 +258,7 @@ const getInstructorCourseSummaries = async (lecturerId) => {
        c.level,
        c.language,
        c.is_active,
+       c.subscription_model,
        c.description,
        c.stock_qty,
        COALESCE(m.enrollment_count, 0) AS enrollment_count,
@@ -270,6 +297,7 @@ const getInstructorCourseSummaries = async (lecturerId) => {
 };
 
 module.exports = {
+  ensureSubscriptionModelColumn,
   getCoursesWithStats,
   getCourseFilterOptions,
   getCourseById,

@@ -48,6 +48,19 @@
             <a class="btn btn-primary" href="/learning/<%= course.id %>/certificate">Download certificate (PDF)</a>
           </div>
         <% } %>
+        <div class="dashboard-panel mb-4">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+              <h5 class="mb-1">Refund eligibility</h5>
+              <p class="text-muted small mb-0">Refunds are available only before any lesson is completed.</p>
+            </div>
+            <% if (refundEligible) { %>
+              <a class="btn btn-outline-danger" href="/refunds/request/<%= refundOrderId %>">Request refund</a>
+            <% } else { %>
+              <button class="btn btn-outline-danger" type="button" disabled>Request refund</button>
+            <% } %>
+          </div>
+        </div>
 
         <section class="dashboard-panel mb-4">
           <h5>Protected course content</h5>

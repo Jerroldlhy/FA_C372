@@ -58,9 +58,25 @@ const getAnnouncementsForLecturer = async (lecturerId, limit = 5, courseId = nul
   return rows;
 };
 
+const getAnnouncementsForStudent = async (studentId, limit = 6) => {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 20));
+  const [rows] = await pool.query(
+    `SELECT DISTINCT a.id, a.course_id, c.course_name, a.title, a.message, a.created_at
+     FROM course_announcements a
+     JOIN courses c ON c.id = a.course_id
+     JOIN enrollments e ON e.course_id = a.course_id
+     WHERE e.student_id = ?
+     ORDER BY a.created_at DESC
+     LIMIT ?`,
+    [studentId, safeLimit]
+  );
+  return rows;
+};
+
 module.exports = {
   ensureAnnouncementsTable,
   ensureRecipientCountColumn,
   createAnnouncement,
   getAnnouncementsForLecturer,
+  getAnnouncementsForStudent,
 };

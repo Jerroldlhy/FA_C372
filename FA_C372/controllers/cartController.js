@@ -5,6 +5,7 @@ const {
   getCartItemsForUser,
 } = require("../models/cartModel");
 const { isStudentEnrolled } = require("../models/enrollmentModel");
+const { getSubscriptionByUser } = require("../models/subscriptionModel");
 const {
   DEFAULT_CURRENCY,
   SUPPORTED_CURRENCIES,
@@ -14,6 +15,11 @@ const {
 } = require("../services/currency");
 
 const isPublishedCourse = (course) => course && course.is_active !== 0;
+const isProCourse = (course) => String(course?.subscription_model || "free").toLowerCase() === "pro";
+const hasProAccess = (subscription) =>
+  Boolean(subscription) &&
+  String(subscription.plan_code || "").toLowerCase() === "pro" &&
+  String(subscription.status || "").toLowerCase() === "active";
 
 const showCart = async (req, res, next) => {
   try {
@@ -56,6 +62,12 @@ const addCourseToCart = async (req, res, next) => {
     if (!course) return res.redirect(redirectWithStatus("cart_error", "course_missing") || "/courses?cart_error=course_missing");
     if (!isPublishedCourse(course)) {
       return res.redirect(redirectWithStatus("cart_error", "course_unpublished") || "/courses?cart_error=course_unpublished");
+    }
+    if (isProCourse(course)) {
+      const subscription = await getSubscriptionByUser(req.user.id);
+      if (!hasProAccess(subscription)) {
+        return res.redirect(redirectWithStatus("cart_error", "pro_required") || "/courses?cart_error=pro_required");
+      }
     }
 
     const enrolled = await isStudentEnrolled(courseId, req.user.id);

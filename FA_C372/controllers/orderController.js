@@ -4,6 +4,8 @@ const {
   getOrdersByUser,
   getOrderByIdForUser,
 } = require("../models/orderModel");
+const { getCartItemsForUser } = require("../models/cartModel");
+const { getSubscriptionByUser } = require("../models/subscriptionModel");
 let PDFDocument = null;
 try {
   PDFDocument = require("pdfkit");
@@ -19,6 +21,21 @@ const checkout = async (req, res, next) => {
       const sessionPayment = req.session?.payment || null;
       if (!sessionPayment || String(sessionPayment.method || "").toLowerCase() !== paymentMethod) {
         return res.redirect(`/cart?checkout_error=${encodeURIComponent("payment_required")}`);
+      }
+    }
+
+    const items = await getCartItemsForUser(req.user.id);
+    const hasProCourse = items.some(
+      (item) => String(item.subscription_model || "free").toLowerCase() === "pro"
+    );
+    if (hasProCourse) {
+      const subscription = await getSubscriptionByUser(req.user.id);
+      const hasAccess =
+        subscription &&
+        String(subscription.plan_code || "").toLowerCase() === "pro" &&
+        String(subscription.status || "").toLowerCase() === "active";
+      if (!hasAccess) {
+        return res.redirect(`/cart?checkout_error=${encodeURIComponent("pro_required")}`);
       }
     }
 

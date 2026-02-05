@@ -363,10 +363,6 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-const googleRedirect = (req, res) => {
-  res.redirect("/login?social_unavailable=1");
-};
-
 module.exports = {
   showLogin,
   showSignup,
@@ -383,5 +379,4 @@ module.exports = {
   verifyEmail,
   requestPasswordReset,
   resetPassword,
-  googleRedirect,
 };

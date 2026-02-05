@@ -53,6 +53,12 @@
         <% if (status?.checkout_error === "invalid_payment_method") { %>
           <div class="alert alert-danger">Invalid payment method selected.</div>
         <% } %>
+        <% if (status?.checkout_error === "pro_required") { %>
+          <div class="alert alert-info">
+            Your cart includes Pro-only courses. Upgrade to a Pro plan to continue.
+            <a href="/plans">View plans</a>.
+          </div>
+        <% } %>
         <% if (status?.payment_ready) { %>
           <div class="alert alert-success text-capitalize"><%= status.payment_ready %> payment verified. You can place the order now.</div>
         <% } %>
@@ -77,6 +83,7 @@
                     <th>Course</th>
                     <th>Category</th>
                     <th>Price</th>
+                    <th>Plan</th>
                     <th>Enrollment</th>
                     <th></th>
                   </tr>
@@ -92,6 +99,11 @@
                       </td>
                       <td data-label="Category"><%= item.category || "General" %></td>
                       <td data-label="Price">$<%= Number(item.price || 0).toFixed(2) %></td>
+                      <td data-label="Plan">
+                        <span class="badge <%= String(item.subscription_model || 'free').toLowerCase() === 'pro' ? 'text-bg-dark' : 'text-bg-success' %>">
+                          <%= String(item.subscription_model || 'free').toLowerCase() === 'pro' ? 'Pro' : 'Free' %>
+                        </span>
+                      </td>
                       <td data-label="Enrollment">
                         <span class="text-muted small">1 seat (fixed)</span>
                       </td>

@@ -102,6 +102,11 @@
             External payments are handled in Cart checkout. Add your course to cart first.
           </div>
         <% } %>
+        <% if (status?.enroll_error === "pro_required") { %>
+          <div class="alert alert-info">
+            This course requires a Pro subscription. Visit <a href="/plans">Plans</a> to upgrade.
+          </div>
+        <% } %>
         <% if (status?.review_success) { %>
           <div class="alert alert-success">Thanks for the review!</div>
         <% } %>
@@ -116,6 +121,11 @@
         <% } %>
         <% if (status?.cart_error === "course_missing") { %>
           <div class="alert alert-danger">Could not add item to cart.</div>
+        <% } %>
+        <% if (status?.cart_error === "pro_required") { %>
+          <div class="alert alert-info">
+            This course requires a Pro subscription. Visit <a href="/plans">Plans</a> to upgrade.
+          </div>
         <% } %>
 
         <div class="dashboard-panel card courses-filter-panel mb-4">
@@ -180,6 +190,8 @@
                 <% const enrolled = enrolledCourseIds.includes(course.id); %>
                 <% const inCart = cartCourseIds.includes(course.id); %>
                 <% const topReview = reviewsMap[course.id] && reviewsMap[course.id][0]; %>
+                <% const isProCourse = String(course.subscription_model || "free").toLowerCase() === "pro"; %>
+                <% const proBlocked = isStudent && isProCourse && !isProSubscriber; %>
                 <article
                   class="course-card"
                   data-course-name="<%= String(course.course_name || '').toLowerCase() %>"
@@ -206,6 +218,9 @@
                         <%= Number(course.avg_rating || 0).toFixed(1) %>/5
                         (<%= course.review_count %>)
                       </p>
+                      <span class="badge <%= isProCourse ? 'text-bg-dark' : 'text-bg-success' %>">
+                        <%= isProCourse ? "Pro" : "Free" %>
+                      </span>
                     </div>
                   </div>
                   <p class="text-muted small mb-2">
@@ -239,7 +254,7 @@
                       <button
                         class="btn btn-primary btn-sm"
                         type="submit"
-                        <%= enrolled ? "disabled" : "" %>
+                        <%= enrolled || proBlocked ? "disabled" : "" %>
                       >
                         <%= enrolled ? "Enrolled" : "Enroll" %>
                       </button>
@@ -249,10 +264,13 @@
                       method="POST"
                       action="/courses/<%= course.id %>/cart"
                     >
-                      <button class="btn btn-outline-secondary btn-sm" type="submit" <%= inCart ? "disabled" : "" %>>
+                      <button class="btn btn-outline-secondary btn-sm" type="submit" <%= inCart || proBlocked ? "disabled" : "" %>>
                         <%= inCart ? "In Cart" : "Add to cart" %>
                       </button>
                     </form>
+                    <% if (proBlocked) { %>
+                      <p class="text-muted small mb-3">Pro subscription required to enroll.</p>
+                    <% } %>
                     <% if (enrolled) { %>
                       <p class="text-success small mb-3">You can now leave a review below.</p>
                       <form

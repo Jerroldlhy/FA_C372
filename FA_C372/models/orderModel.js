@@ -83,6 +83,19 @@ const getOrderPaymentForUser = async (orderId, userId) => {
   return rows[0] || null;
 };
 
+const getLatestOrderForUserCourse = async (userId, courseId) => {
+  const [rows] = await pool.query(
+    `SELECT o.id AS order_id, o.payment_status, o.refunded_amount, o.created_at
+     FROM orders o
+     JOIN order_items oi ON oi.order_id = o.id
+     WHERE o.user_id = ? AND oi.course_id = ?
+     ORDER BY o.created_at DESC
+     LIMIT 1`,
+    [userId, courseId]
+  );
+  return rows[0] || null;
+};
+
 const createOrderFromCart = async (userId, paymentMethod = "wallet", paymentContext = {}) => {
   const connection = await pool.getConnection();
   try {
@@ -274,6 +287,7 @@ module.exports = {
   getOrdersByUser,
   getOrderByIdForUser,
   getOrderPaymentForUser,
+  getLatestOrderForUserCourse,
   getLecturerRevenueSummary,
   getLecturerMonthlyRevenue,
 };

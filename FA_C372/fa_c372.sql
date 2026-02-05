@@ -146,6 +146,7 @@ CREATE TABLE `courses` (
   `language` varchar(50) DEFAULT NULL,
   `stock_qty` int NOT NULL DEFAULT '0',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `subscription_model` enum('free','pro') NOT NULL DEFAULT 'free',
   `category_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `instructor_id` (`instructor_id`),
@@ -161,7 +162,7 @@ CREATE TABLE `courses` (
 
 LOCK TABLES `courses` WRITE;
 /*!40000 ALTER TABLE `courses` DISABLE KEYS */;
-INSERT INTO `courses` VALUES (1,'Fintech','fintech',150.00,'SOI',NULL,'2026-02-03 14:32:25',NULL,NULL,0,1,NULL);
+INSERT INTO `courses` VALUES (1,'Fintech','fintech',150.00,'SOI',NULL,'2026-02-03 14:32:25',NULL,NULL,0,1,'free',NULL);
 /*!40000 ALTER TABLE `courses` ENABLE KEYS */;
 UNLOCK TABLES;
 

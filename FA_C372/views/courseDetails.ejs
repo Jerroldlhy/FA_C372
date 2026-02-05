@@ -30,9 +30,19 @@
       <% if (status && status.cart_error === "course_missing") { %>
         <div class="alert alert-danger">Course was not found.</div>
       <% } %>
+      <% if (status && status.cart_error === "pro_required") { %>
+        <div class="alert alert-info">
+          This course requires a Pro subscription. Visit <a href="/plans">Plans</a> to upgrade.
+        </div>
+      <% } %>
       <% if (status && status.enroll_error === "external_checkout") { %>
         <div class="alert alert-warning">
           External payments are handled in Cart checkout. Add this course to cart first.
+        </div>
+      <% } %>
+      <% if (status && status.enroll_error === "pro_required") { %>
+        <div class="alert alert-info">
+          This course requires a Pro subscription. Visit <a href="/plans">Plans</a> to upgrade.
         </div>
       <% } %>
       <% if (status && status.enrolled) { %>
@@ -40,6 +50,12 @@
       <% } %>
       <% if (status && status.content_error === "not_enrolled") { %>
         <div class="alert alert-warning">You must enroll first to access full course content.</div>
+      <% } %>
+      <% if (isStudent && requiresPro && !isProSubscriber) { %>
+        <div class="alert alert-info">
+          This is a Pro-only course. Upgrade to the Pro plan to enroll.
+          <a href="/plans">View plans</a>.
+        </div>
       <% } %>
 
       <div class="row g-4">
@@ -51,12 +67,17 @@
               <div class="d-flex flex-wrap gap-2 mb-3">
                 <span class="badge text-bg-primary">$<%= Number(course.price).toFixed(2) %></span>
                 <span class="badge text-bg-light text-secondary"><%= course.category || "General" %></span>
+                <% if (requiresPro) { %>
+                  <span class="badge text-bg-dark">Pro</span>
+                <% } else { %>
+                  <span class="badge text-bg-success">Free</span>
+                <% } %>
               </div>
 
               <% if (isStudent) { %>
                 <div class="d-flex flex-wrap gap-2">
                   <form method="POST" action="/courses/<%= course.id %>/cart?redirect_to=<%= encodeURIComponent('/courses/' + course.id) %>">
-                    <button class="btn btn-outline-secondary" type="submit" <%= inCart ? "disabled" : "" %>>
+                    <button class="btn btn-outline-secondary" type="submit" <%= inCart || !canAccess ? "disabled" : "" %>>
                       <%= inCart ? "In Cart" : "Add to Cart" %>
                     </button>
                   </form>
@@ -82,7 +103,7 @@
                     <option value="wallet">Wallet</option>
                   </select>
                 </div>
-                <button class="btn btn-primary w-100" type="submit" <%= !isStudent || enrolled ? "disabled" : "" %>>
+                <button class="btn btn-primary w-100" type="submit" <%= !isStudent || enrolled || !canAccess ? "disabled" : "" %>>
                   <%= enrolled ? "Already Enrolled" : "Enroll Now" %>
                 </button>
               </form>

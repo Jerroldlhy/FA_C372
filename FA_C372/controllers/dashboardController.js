@@ -18,7 +18,9 @@ const {
   getLecturerRevenueSummary,
   getLecturerMonthlyRevenue,
 } = require("../models/orderModel");
-const { getAnnouncementsForLecturer } = require("../models/announcementModel");
+const { getAnnouncementsForLecturer, getAnnouncementsForStudent } = require("../models/announcementModel");
+const { getOrdersByUser } = require("../models/orderModel");
+const { getByUser: getRefundsByUser } = require("../models/refundRequestModel");
 const { getFraudEventsSummary, getRecentFraudEvents } = require("../models/paymentAttemptModel");
 const {
   getAllUsers,
@@ -40,9 +42,14 @@ const {
 const studentDashboard = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const enrollments = await getEnrollmentsByStudent(userId);
-    const walletBalance = await getWalletBalance(userId);
-    const transactions = await getTransactionsForUser(userId);
+    const [enrollments, walletBalance, transactions, announcements, orders, refunds] = await Promise.all([
+      getEnrollmentsByStudent(userId),
+      getWalletBalance(userId),
+      getTransactionsForUser(userId),
+      getAnnouncementsForStudent(userId, 6),
+      getOrdersByUser(userId),
+      getRefundsByUser(userId),
+    ]);
     const selectedCurrency = normaliseCurrency(req.session?.currency || DEFAULT_CURRENCY);
     const walletDisplayBalance = convertAmount(walletBalance, DEFAULT_CURRENCY, selectedCurrency);
     res.render("dashboard", {
@@ -53,6 +60,9 @@ const studentDashboard = async (req, res, next) => {
       currencySymbol: getSymbol(selectedCurrency),
       supportedCurrencies: SUPPORTED_CURRENCIES,
       transactions,
+      orders,
+      refunds,
+      announcements,
       status: req.query,
     });
   } catch (err) {
