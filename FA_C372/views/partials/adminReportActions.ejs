@@ -1,0 +1,14 @@
+<div class="hero-cta">
+  <a class="btn btn-outline-primary" href="<%= exportCsvUrl %>">Export CSV</a>
+  <a class="btn btn-primary" href="<%= exportPdfUrl %>">Export PDF</a>
+  <% if (links?.sales && links?.sales !== activeReport) { %>
+    <a class="btn btn-outline-secondary" href="<%= links.sales %>">Sales report</a>
+  <% } %>
+  <% if (links?.fraud && links?.fraud !== activeReport) { %>
+    <a class="btn btn-outline-secondary" href="<%= links.fraud %>">Fraud audit report</a>
+  <% } %>
+  <% if (links?.audit && links?.audit !== activeReport) { %>
+    <a class="btn btn-outline-secondary" href="<%= links.audit %>">Audit log report</a>
+  <% } %>
+  <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
+</div>

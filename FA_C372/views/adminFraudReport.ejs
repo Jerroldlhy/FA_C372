@@ -24,12 +24,16 @@
             | Severity: <strong><%= filters.severity || "All" %></strong>
           </p>
         </div>
-        <div class="hero-cta">
-          <a class="btn btn-outline-primary" href="/admin/reports/fraud/export?format=csv&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>&severity=<%= encodeURIComponent(filters.severity || '') %>">Export CSV</a>
-          <a class="btn btn-primary" href="/admin/reports/fraud/export?format=pdf&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>&severity=<%= encodeURIComponent(filters.severity || '') %>">Export PDF</a>
-          <a class="btn btn-outline-secondary" href="/admin/reports/audit">Audit log report</a>
-          <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
-        </div>
+        <%- include("partials/adminReportActions", {
+          exportCsvUrl: `/admin/reports/fraud/export?format=csv&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}&severity=${encodeURIComponent(filters.severity || "")}`,
+          exportPdfUrl: `/admin/reports/fraud/export?format=pdf&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}&severity=${encodeURIComponent(filters.severity || "")}`,
+          links: {
+            sales: "/admin/reports/sales",
+            fraud: "/admin/reports/fraud",
+            audit: "/admin/reports/audit"
+          },
+          activeReport: "/admin/reports/fraud"
+        }) %>
       </section>
 
       <section class="dashboard-panel card shadow-sm mb-4">

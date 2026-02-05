@@ -21,11 +21,16 @@
           <h1 class="display-6 fw-bold mb-1">Audit Log Report</h1>
           <p class="lead text-muted mb-0">Track critical user and admin actions with filterable evidence export.</p>
         </div>
-        <div class="hero-cta">
-          <a class="btn btn-outline-primary" href="/admin/reports/audit/export?format=csv&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>&activity_type=<%= encodeURIComponent(filters.activityType || '') %>&user_id=<%= encodeURIComponent(filters.userId || '') %>&actor_user_id=<%= encodeURIComponent(filters.actorUserId || '') %>">Export CSV</a>
-          <a class="btn btn-primary" href="/admin/reports/audit/export?format=pdf&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>&activity_type=<%= encodeURIComponent(filters.activityType || '') %>&user_id=<%= encodeURIComponent(filters.userId || '') %>&actor_user_id=<%= encodeURIComponent(filters.actorUserId || '') %>">Export PDF</a>
-          <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
-        </div>
+        <%- include("partials/adminReportActions", {
+          exportCsvUrl: `/admin/reports/audit/export?format=csv&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}&activity_type=${encodeURIComponent(filters.activityType || "")}&user_id=${encodeURIComponent(filters.userId || "")}&actor_user_id=${encodeURIComponent(filters.actorUserId || "")}`,
+          exportPdfUrl: `/admin/reports/audit/export?format=pdf&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}&activity_type=${encodeURIComponent(filters.activityType || "")}&user_id=${encodeURIComponent(filters.userId || "")}&actor_user_id=${encodeURIComponent(filters.actorUserId || "")}`,
+          links: {
+            sales: "/admin/reports/sales",
+            fraud: "/admin/reports/fraud",
+            audit: "/admin/reports/audit"
+          },
+          activeReport: "/admin/reports/audit"
+        }) %>
       </section>
 
       <section class="dashboard-panel card shadow-sm mb-4">

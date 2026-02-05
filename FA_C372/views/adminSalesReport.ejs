@@ -15,7 +15,7 @@
   <body class="admin-dashboard">
     <%- include("partials/navbar") %>
     <main class="admin-main">
-      <section class="hero-intro mb-4">
+      <section class="hero-intro stacked-actions mb-4">
         <div>
           <p class="eyebrow text-uppercase text-muted mb-1">Analytics</p>
           <h1 class="display-6 fw-bold mb-1">Sales Report</h1>
@@ -23,13 +23,16 @@
             Date range: <strong><%= filters.from || "All" %></strong> to <strong><%= filters.to || "All" %></strong>
           </p>
         </div>
-        <div class="hero-cta">
-          <a class="btn btn-outline-primary" href="/admin/reports/sales/export?format=csv&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export CSV</a>
-          <a class="btn btn-primary" href="/admin/reports/sales/export?format=pdf&from=<%= encodeURIComponent(filters.from || '') %>&to=<%= encodeURIComponent(filters.to || '') %>">Export PDF</a>
-          <a class="btn btn-outline-secondary" href="/admin/reports/fraud">Fraud audit report</a>
-          <a class="btn btn-outline-secondary" href="/admin/reports/audit">Audit log report</a>
-          <a class="btn btn-outline-secondary" href="/dashboard/admin">Back to admin dashboard</a>
-        </div>
+        <%- include("partials/adminReportActions", {
+          exportCsvUrl: `/admin/reports/sales/export?format=csv&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}`,
+          exportPdfUrl: `/admin/reports/sales/export?format=pdf&from=${encodeURIComponent(filters.from || "")}&to=${encodeURIComponent(filters.to || "")}`,
+          links: {
+            sales: "/admin/reports/sales",
+            fraud: "/admin/reports/fraud",
+            audit: "/admin/reports/audit"
+          },
+          activeReport: "/admin/reports/sales"
+        }) %>
       </section>
       <section class="dashboard-panel card shadow-sm mb-4">
         <div class="card-body">
