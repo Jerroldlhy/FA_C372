@@ -4,7 +4,7 @@ const session = require("express-session");
 const dotenv = require("dotenv");
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
-const pool = require("./models/db");
+const pool = require("./db");
 const MySQLSessionStore = require("./models/mysqlSessionStore");
 const { enforceSameOrigin } = require("./middleware/securityMiddleware");
 const authController = require("./controllers/authController");

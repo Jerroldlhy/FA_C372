@@ -1,4 +1,4 @@
-const pool = require("./db");
+const pool = require("../db");
 const { clearCartByUser } = require("./cartModel");
 
 class CheckoutError extends Error {

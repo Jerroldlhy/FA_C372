@@ -3,7 +3,7 @@ const {
   countRecentAttempts,
   countRecentFailures,
 } = require("../models/paymentAttemptModel");
-const pool = require("../models/db");
+const pool = require("../db");
 
 const MAX_ATTEMPTS_PER_WINDOW = Number(process.env.FRAUD_MAX_ATTEMPTS || 5);
 const MAX_FAILED_PER_WINDOW = Number(process.env.FRAUD_MAX_FAILED || 3);

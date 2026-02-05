@@ -1,4 +1,4 @@
-const pool = require("./db");
+const pool = require("../db");
 
 const createTransaction = async (userId, type, amount, status) => {
   await pool.query(

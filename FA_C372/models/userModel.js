@@ -1,4 +1,4 @@
-const pool = require("./db");
+const pool = require("../db");
 
 const columnExists = async (tableName, columnName) => {
   const [rows] = await pool.query(

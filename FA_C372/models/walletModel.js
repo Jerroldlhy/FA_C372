@@ -1,4 +1,4 @@
-const pool = require("./db");
+const pool = require("../db");
 
 const getWalletBalance = async (userId) => {
   const [rows] = await pool.query(
