@@ -13,6 +13,8 @@ const {
   getSymbol,
 } = require("../services/currency");
 
+const isPublishedCourse = (course) => course && course.is_active !== 0;
+
 const showCart = async (req, res, next) => {
   try {
     const items = await getCartItemsForUser(req.user.id);
@@ -52,6 +54,9 @@ const addCourseToCart = async (req, res, next) => {
     };
     const course = await getCourseById(courseId);
     if (!course) return res.redirect(redirectWithStatus("cart_error", "course_missing") || "/courses?cart_error=course_missing");
+    if (!isPublishedCourse(course)) {
+      return res.redirect(redirectWithStatus("cart_error", "course_unpublished") || "/courses?cart_error=course_unpublished");
+    }
 
     const enrolled = await isStudentEnrolled(courseId, req.user.id);
     if (enrolled) return res.redirect(redirectWithStatus("cart_error", "already_enrolled") || "/courses?cart_error=already_enrolled");

@@ -18,6 +18,21 @@ const {
 const { getCartItemsForUser } = require("../models/cartModel");
 const { logUserActivity } = require("../models/userActivityModel");
 
+const normalizeActiveFlag = (value, fallback = 1) => {
+  if (Array.isArray(value)) {
+    value = value[value.length - 1];
+  }
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+  const normalized = String(value).toLowerCase();
+  if (["1", "true", "on"].includes(normalized)) return 1;
+  if (["0", "false", "off"].includes(normalized)) return 0;
+  return fallback;
+};
+
+const isPublishedCourse = (course) => course && course.is_active !== 0;
+
 const listCourses = async (req, res, next) => {
   try {
     const role = req.user?.role ? String(req.user.role).toLowerCase() : "";
@@ -33,8 +48,8 @@ const listCourses = async (req, res, next) => {
       maxPrice: req.query.max_price || "",
     };
 
-    const courses = await getCoursesWithStats({ ...filters, includeInactive: true });
-    const filterOptions = await getCourseFilterOptions({ includeInactive: true });
+    const courses = await getCoursesWithStats(filters);
+    const filterOptions = await getCourseFilterOptions();
     const courseIds = courses.map((c) => c.id);
     const reviewsMap = {};
     if (courseIds.length) {
@@ -77,10 +92,20 @@ const getCourseDetails = async (req, res, next) => {
   try {
     const course = await getCourseById(req.params.id);
     if (!course) return res.status(404).render("404");
+    const viewerRole = req.user?.role ? String(req.user.role).toLowerCase() : "";
+    const currentUserId = req.user ? Number(req.user.id) : null;
+    const ownsCourse =
+      Boolean(currentUserId) &&
+      course.instructor_id &&
+      Number(course.instructor_id) === currentUserId;
+    const canPreviewDraft = viewerRole === "admin" || (viewerRole === "lecturer" && ownsCourse);
+    if (!isPublishedCourse(course) && !canPreviewDraft) {
+      return res.status(404).render("404");
+    }
 
     let enrolled = false;
     let inCart = false;
-    const isStudent = req.user && String(req.user.role).toLowerCase() === "student";
+    const isStudent = viewerRole === "student";
     if (isStudent) {
       enrolled = await isStudentEnrolled(course.id, req.user.id);
       const cartItems = await getCartItemsForUser(req.user.id);
@@ -135,13 +160,8 @@ const handleUpdateCourse = async (req, res, next) => {
     if (role === "admin" && req.body.instructor_id && (await isLecturerId(req.body.instructor_id))) {
       assignedInstructor = req.body.instructor_id;
     }
-    const isActiveRaw = req.body.is_active;
-    const normalizedIsActive =
-      typeof isActiveRaw === "undefined"
-        ? course.is_active
-        : ["1", "true", "on"].includes(String(isActiveRaw).toLowerCase())
-        ? 1
-        : 0;
+    const fallbackActiveState = course.is_active === 0 ? 0 : 1;
+    const normalizedIsActive = normalizeActiveFlag(req.body.is_active, fallbackActiveState);
     await updateCourse(req.params.id, {
       course_name: course_name || course.course_name,
       price: price || course.price,
@@ -176,6 +196,10 @@ const handleDeleteCourse = async (req, res, next) => {
 const handleReview = async (req, res, next) => {
   try {
     const courseId = req.params.id;
+    const course = await getCourseById(courseId);
+    if (!course || !isPublishedCourse(course)) {
+      return res.redirect("/courses?review_error=course_unpublished");
+    }
     const enrolled = await isStudentEnrolled(courseId, req.user.id);
     if (!enrolled) return res.redirect("/courses?review_error=not_enrolled");
     let rating = Number(req.body.rating || 0);
@@ -194,6 +218,9 @@ const handleEnroll = async (req, res, next) => {
   try {
     const course = await getCourseById(courseId);
     if (!course) return res.redirect("/courses?enroll_error=course_missing");
+    if (!isPublishedCourse(course)) {
+      return res.redirect("/courses?enroll_error=course_unpublished");
+    }
     const price = Number(course.price);
     if (price < 0) return res.redirect("/courses?enroll_error=invalid_price");
     const enrolled = await isStudentEnrolled(courseId, req.user.id);
