@@ -1075,14 +1075,10 @@ img {
 }
 
 .auth-page .site-footer {
-  width: 100%;
-  margin-top: 20px;
-}
-
-.auth-page.auth-page-2fa .site-footer {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
+  margin-top: 20px;
 }
 
 .back-link {
